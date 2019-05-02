@@ -1,4 +1,4 @@
-# expresso-mode
+# ☕ expresso-mode.el
 
 `expresso-mode` is an *Emacs* Major Mode for editing *Expresso* (`.x`) files.
 
