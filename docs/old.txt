@@ -1,0 +1,41 @@
+========================================
+
+(defun expresso-mode-help ()
+
+  "Open a (Help Buffer) tutorial for `expresso-mode'."
+
+  (interactive)
+
+  (let* ((HELP-BUFFER (get-buffer-create expresso-mode-help-buffer-name))
+         )
+
+    (with-current-buffer HELP-BUFFER
+
+      (when (<= (buffer-size) 0)          ; “buffer-empty-p”.
+
+        ;; Initialize:
+
+        (help-mode-setup)
+
+        ;; Configure:
+
+        (beginning-of-buffer)
+
+        (insert "Expresso Mode\n")
+        (insert "Example URL `https://github.com/willtim/Expresso#readme'\n")
+        (insert "\n")
+
+        ;; Finalize:
+
+        (help-mode-finish)))
+
+    (pop-to-buffer-same-window HELP-BUFFER)))
+
+========================================
+
+
+
+
+
+
+========================================
