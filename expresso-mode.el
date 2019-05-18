@@ -47,13 +47,14 @@
 
 ;; Builtins:
 
-(eval-when-compile 
+(eval-when-compile
+  (require 'rx)
+  (require 'pcase)
   (require 'cl-lib))
 
 ;;----------------------------------------------;;
 
 (progn
-  (require 'pcase)
   (require 'seq))
 
 ;;----------------------------------------------;;
@@ -66,12 +67,24 @@
 
   "Customize the behavior of `expresso-mode'."
 
-  :link (url-link :tag "GitHub" "https://github.com/sboosali/expresso-mode")
+  :link (url-link :tag "GitHub" "https://github.com/sboosali/expresso-mode#readme")
 
   :group 'language)
 
 ;;==============================================;;
 
+(defcustom expresso-filename-extensions
+
+  '( "x" "expresso" )
+
+  "File extensions for Expresso files."
+
+  :type '(repeat (string :tag "File Extension"))
+
+  :safe #'listp
+  :group 'expresso)
+
+;;----------------------------------------------;;
 
 
 
@@ -102,16 +115,6 @@
 
 
 
-
-
-
-
-e.g. the hyphen character (`-`) in Expresso Mode (`expresso-mode`) is:
-
-- a punctuation character (`-`), e.g. `(2 - 3)` or `(xs --. y)`.
-- the characters of a (single-line) *start-of-comment* sequence (`--`), e.g. `-- ...`.
-- the second character of a (multi-line) *start-of-comment* sequence (`{-`), e.g. `{- ...`.
-- the first character of a (multi-line) *end-of-comment* sequence (`-}`), e.g. `... -}`.
 
 
 
@@ -215,189 +218,12 @@ See URL `https://github.com/willtim/Expresso/blob/master/src/Expresso/Parser.hs'
 
 
 
-    , P.identStart     = letter
-    , P.identLetter    = alphaNum <|> oneOf "_
-
-P.opLetter       = oneOf ":!#$%&*+./<=>?@\\^|-~"
-
-
-(defconst expresso-mode-mode-syntax-table
+;;     , P.identStart     = letter
+;;     , P.identLetter    = alphaNum <|> oneOf "_
+;; P.opLetter       = oneOf ":!#$%&*+./<=>?@\\^|-~"
 
 
-  (let ((TABLE (make-syntax-table)))
 
-
-    ;; « " » delimits string literals,
-    ;; « ' » delimits character literals:
-
-    (modify-syntax-entry ?\" "\"" TABLE)
-    (modify-syntax-entry ?\' "\"" TABLE)
-
-    ;; « - » is punctuation, but 
-    ;; « -- » is a comment starter:
-
-    (modify-syntax-entry ?- ". 12" TABLE)
-
-
-    ;; « \n » is a comment ender:
-
-    (modify-syntax-entry ?\n ">" TABLE)
-
-
-    ;; Identifiers can have « _ » and « ' »,
-    ;; but « ' » already has a Syntax Class (see above):
-
-    (modify-syntax-entry ?\_ "_" TABLE)
- ;; (modify-syntax-entry ?\' "_" TABLE)
-
-
-    ;; « . » is an operator:
-
-    (modify-syntax-entry ?. "" TABLE)
-
-    ;; ‘()’, ‘[]’, ‘{}’ — are Bracket Character-Pairs:
-
-    (modify-syntax-entry ?\( "()" TABLE)
-    (modify-syntax-entry ?\) ")(" TABLE)
-
-    (modify-syntax-entry ?\{ "(}" TABLE)
-    (modify-syntax-entry ?\} "){" TABLE)
-
-    (modify-syntax-entry ?\[ "(]" TABLE)
-    (modify-syntax-entry ?\] ")[" TABLE)
-
-    ;; « » is a :
-
-    (modify-syntax-entry ? "" TABLE)
-
-
-    ;; « » is a :
-
-    (modify-syntax-entry ? "" TABLE)
-
-
-    ;; « » is a :
-
-    (modify-syntax-entry ? "" TABLE)
-
-
-    ;; « » is a :
-
-    (modify-syntax-entry ? "" TABLE)
-
-
-    ;; « » is a :
-
-    (modify-syntax-entry ? "" TABLE)
-
-
-    ;; « » is a :
-
-    (modify-syntax-entry ? "" TABLE)
-
-
-    ;; « » is a :
-
-    (modify-syntax-entry ? "" TABLE)
-
-
-    ;; « » is a :
-
-    (modify-syntax-entry ? "" TABLE)
-
-
-    ;; « » is a :
-
-    (modify-syntax-entry ? "" TABLE)
-
-    TABLE))
-
-;; Notes:
-;;
-;; Word constituents: ‘w’
-;; Symbol constituents: ‘_’
-;; Punctuation characters: ‘.’
-;; Open parenthesis characters: ‘(’
-;; Close parenthesis characters: ‘)’
-;; String quotes: ‘"’
-;; Comment starters: ‘<’
-;; Comment enders: ‘>’
-;;
-;;
-;;
-;;
-;;
-;;
-
-;; e.g. Expresso expressions:
-;; 
-;; λ> let sqmag = r -> r.x*r.x + r.y*r.y
-;; 
-;; λ> {| x = "foo" |} >> {| x := "bar" |} -- Type checks
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
-;; 
-;; λ> 
 
 
 
@@ -570,20 +396,6 @@ See `auto-mode-alist' for the syntax."
 
 
 ;;----------------------------------------------;;
-;; Keymaps -------------------------------------;;
-;;----------------------------------------------;;
-
-(defvar expresso-mode-map
-
-  (let ((KEYMAP (make-sparse-keymap)))
-
-    (define-key KEYMAP (kbd "C-c C-h") #'expresso-mode-help)
-
-    KEYMAP)
-
-  "Keymap for `expresso-mode'.")
-
-;;----------------------------------------------;;
 ;; Hooks ---------------------------------------;;
 ;;----------------------------------------------;;
 
@@ -591,7 +403,9 @@ See `auto-mode-alist' for the syntax."
 
   '()
 
-  "List of functions to run after `expresso-mode' is enabled.
+  "Commands to run after `expresso-mode' is enabled.
+
+Type: a `listp' of `functionp's.
 
 Use to enable minor modes coming with `expresso-mode' or run an
 arbitrary function.
@@ -614,29 +428,6 @@ run at the same time."
   :group 'expresso)
 
 ;;----------------------------------------------;;
-;; Menu ----------------------------------------;;
-;;----------------------------------------------;;
-
-(easy-menu-define expresso-mode-menu expresso-mode-map
-
-  "Menu for Expresso Mode."
-
-  `("Expresso"
-
-    ["Customize"          (customize-group 'expresso)]
-    "---"
-    ["Indent line"        indent-according-to-mode]
-    ["(Un)Comment region" comment-region mark-active]
-    "---"
-    ,(if (default-boundp 'eldoc-documentation-function)
-         ["Doc mode" eldoc-mode
-          :style toggle :selected (bound-and-true-p eldoc-mode)]
-       ["Doc mode" expresso-doc-mode
-        :style toggle :selected (and (boundp 'expresso-doc-mode) expresso-doc-mode)])
-    "---"
-    ))
-
-;;----------------------------------------------;;
 ;; Faces ---------------------------------------;;
 ;;----------------------------------------------;;
 
@@ -653,7 +444,8 @@ Customize the appearence of `expresso-mode'."
 
 (defface expresso-default-face
 
-  '((t :inherit default))
+  '((t :inherit default)
+    )
 
   "Default Expresso face."
 
@@ -663,7 +455,8 @@ Customize the appearence of `expresso-mode'."
 
 (defface expresso-keyword-face
 
-  '((t :inherit font-lock-keyword-face))
+  '((t :inherit font-lock-keyword-face)
+    )
 
   "Face for Expresso keywords."
 
@@ -673,7 +466,8 @@ Customize the appearence of `expresso-mode'."
 
 (defface expresso-builtin-face
 
-  '((t :inherit font-lock-builtin-face))
+  '((t :inherit font-lock-builtin-face)
+    )
 
   "Face for Expresso builtins."
 
@@ -683,7 +477,8 @@ Customize the appearence of `expresso-mode'."
 
 (defface expresso-type-face
 
-  '((t :inherit font-lock-type-face))
+  '((t :inherit font-lock-type-face)
+    )
 
   "Face for Expresso types."
 
@@ -691,9 +486,21 @@ Customize the appearence of `expresso-mode'."
 
 ;;----------------------------------------------;;
 
+(defface expresso-builtin-type-face
+
+  '((t :inherit expresso-type-face)
+    )
+
+  "Face for Expresso builtin types."
+
+  :group 'expresso-faces)
+
+;;----------------------------------------------;;
+
 (defface expresso-function-face
 
-  '((t :inherit font-lock-function-name-face))
+  '((t :inherit font-lock-function-name-face)
+    )
 
   "Face for Expresso functions."
 
@@ -703,7 +510,8 @@ Customize the appearence of `expresso-mode'."
 
 (defface expresso-variable-face
 
-  '((t :inherit font-lock-variable-name-face))
+  '((t :inherit font-lock-variable-name-face)
+    )
 
   "Face for Expresso variables."
 
@@ -713,7 +521,8 @@ Customize the appearence of `expresso-mode'."
 
 (defface expresso-constant-face
 
-  '((t :inherit font-lock-constant-face))
+  '((t :inherit font-lock-constant-face)
+    )
 
   "Face for Expresso constants."
 
@@ -723,7 +532,8 @@ Customize the appearence of `expresso-mode'."
 
 (defface expresso-string-face
 
-  '((t :inherit font-lock-string-face))
+  '((t :inherit font-lock-string-face)
+    )
 
   "Face for Expresso strings."
 
@@ -733,7 +543,8 @@ Customize the appearence of `expresso-mode'."
 
 (defface expresso-operator-face
 
-  '((t :inherit font-lock-keyword-face))
+  '((t :inherit font-lock-keyword-face)
+    )
 
   "Face for Expresso operators."
 
@@ -743,7 +554,8 @@ Customize the appearence of `expresso-mode'."
 
 (defface expresso-comment-face
 
-  '((t :inherit font-lock-comment-face))
+  '((t :inherit font-lock-comment-face)
+    )
 
   "Face for Expresso comments."
 
@@ -753,14 +565,41 @@ Customize the appearence of `expresso-mode'."
 
 (defface expresso-comment-face
 
-  '((t :inherit font-lock-comment-delimiter-face))
+  '((t :inherit font-lock-comment-delimiter-face)
+    )
 
-  "Face for Expresso comment delimieters (i.e. « “--” »)."
+  "Face for Expresso comment delimieters (i.e. “--”)."
 
   :group 'expresso-faces)
 
 ;; expresso-definition-face       → font-lock-function-name-face
 ;; expresso-operator-face         → font-lock-variable-name-face
+
+;;----------------------------------------------;;
+;; Regexps -------------------------------------;;
+;;----------------------------------------------;;
+
+(defun expresso-builtin-regex ()
+
+  "Return a `regexp' matching any Expresso builtin.
+
+Customize:
+
+• Variable `expresso-builtins'"
+
+  (expresso--regexp-opt expresso-builtins))
+
+;;----------------------------------------------;;
+
+(defun expresso-type-regex ()
+
+  "Return a `regexp' matching any Expresso type.
+
+Customize:
+
+• Variable `expresso-types'"
+
+  (expresso--regexp-opt expresso-types))
 
 ;;----------------------------------------------;;
 ;; Syntax --------------------------------------;;
@@ -808,16 +647,17 @@ Customize the appearence of `expresso-mode'."
     (modify-syntax-entry ?&  "." TABLE)
     (modify-syntax-entry ?*  "." TABLE)
     ;; (see above for the Syntax Class of « - »)
-    (modify-syntax-entry ?=  "." TABLE)
+    (modify-syntax-entry ?=  "." TABLE) ; the equal sign is the definition operator.
     (modify-syntax-entry ?+  "." TABLE)
-    (modify-syntax-entry ?.  "." TABLE)
+    (modify-syntax-entry ?,  "." TABLE) ; the comma is the delimiter within any bracket.
+    (modify-syntax-entry ?.  "." TABLE) ; the period is the record selection operator.
     (modify-syntax-entry ?<  "." TABLE)
     (modify-syntax-entry ?>  "." TABLE)
     (modify-syntax-entry ?/  "." TABLE)
     (modify-syntax-entry ?:  "." TABLE)
     (modify-syntax-entry ?\? "." TABLE)
-    (modify-syntax-entry ?\\ "." TABLE)
-    (modify-syntax-entry ?|  "." TABLE)
+    (modify-syntax-entry ?\\ "." TABLE) ; the backslash is the Lacks-Constraint type operator.
+    (modify-syntax-entry ?|  "." TABLE) ; the vertical bar is the record extension operator.
 
     ;; « " » is a string delimiter:
 
@@ -898,7 +738,294 @@ Customize the appearence of `expresso-mode'."
 
     TABLE)
 
-  "Expresso Mode's `syntax-table-p'.")
+  "Expresso Mode's `syntax-table-p'.
+
+For example, the hyphen character (i.e. « - ») in Expresso Mode plays several roles:
+
+• a punctuation character (« - ») — e.g. `(2 - 3)` or `(xs --. y)`.
+• the characters of a (single-line) *start-of-comment* sequence (« -- ») — e.g. « -- ... ».
+• the second character of a (multi-line) *start-of-comment* sequence (« {- ») — e.g. « {- ... ».
+• the first character of a (multi-line) *end-of-comment* sequence (« -} ») — e.g. « ... -} ».
+
+These roles (punctuation and single-line comment and multi-line comment) are represented by this Syntax Entry:
+
+    (modify-syntax-entry ?- \". 123\" `expresso-mode-syntax-table')")
+
+;;----------------------------------------------;;
+;; Comments:
+
+(defcustom expresso-comment-start "-- "
+
+  "`comment-start' for `expresso-mode'."
+
+  :type '(regexp)
+  :safe #'stringp
+  :group 'expresso)
+
+;;----------------------------;;
+
+(defcustom expresso-comment-start-skip
+
+  (rx (or "--" "{-" (syntax comment-start)) (0+ blank))
+
+  "`comment-start-skip' for `expresso-mode'."
+
+  :type '(regexp)
+  :safe #'stringp
+  :group 'expresso)
+
+;;----------------------------;;
+
+(defcustom expresso-comment-padding 0
+
+  "`comment-padding' for `expresso-mode'."
+
+  :type '(choice (string  :tag "Padding (string)          ")
+                 (integer :tag "Padding (number of spaces)"))
+  :safe t
+  :group 'expresso)
+
+;;----------------------------;;
+
+(defcustom expresso-comment-end
+
+  ""
+
+  "`comment-end' for `expresso-mode'."
+
+  :type '(regexp)
+  :safe #'stringp
+  :group 'expresso)
+
+;;----------------------------;;
+
+(defcustom expresso-comment-end-skip
+
+  "\\(-}\\|\\s>\\)"
+
+  (rx (0+ blank) (or "-}" (syntax comment-end)))
+
+  "`comment-end-skip' for `expresso-mode'."
+
+  :type '(regexp)
+  :safe #'stringp
+  :group 'expresso)
+
+;;----------------------------------------------;;
+;; Paragraphs:
+
+(defcustom expresso-paragraph-start
+
+  (concat " *{-\\| *-- |\\|" page-delimiter)
+
+  "`paragraph-start' for `expresso-mode'."
+
+  :type '(regexp)
+  :safe #'stringp
+  :group 'expresso)
+
+;;----------------------------;;
+
+(defcustom expresso-paragraph-separate
+
+  (concat " *$\\| *\\({-\\|-}\\) *$\\|" page-delimiter)
+
+  "`paragraph-separate' for `expresso-mode'."
+
+  :type '(regexp)
+  :safe #'stringp
+  :group 'expresso)
+
+;;----------------------------------------------;;
+;; Indentation ---------------------------------;;
+;;----------------------------------------------;;
+
+(defcustom expresso-basic-offset 2
+
+  "`basic-offset' (of indentation) for `expresso-mode'."
+
+  :type '(integer :tag "Offset")
+  :safe #'integerp
+  :group 'expresso)
+
+;;----------------------------------------------;;
+;; ElDoc ---------------------------------------;;
+;;----------------------------------------------;;
+
+(defvar expresso-doc-table
+
+  (let* ((TEST #'equal)
+         (TABLE (make-hash-table :test TEST))
+         )
+
+    (puthash "map" "map : forall a b. (a -> b) -> [a] -> [b]" TABLE)
+
+    TABLE)
+
+  "Associate types and functions with signatures or with documentation.
+
+Type is a `hash-table-p':
+
+• whose keys are `stringp's.
+• whose values are `stringp's.")
+
+;;----------------------------------------------;;
+
+(defun expresso-doc-current-info ()
+
+  "`eldoc-documentation-function' for `expresso-mode'.
+
+Output:
+
+• a `stringp' or nil.
+  a one-line message: documentation or a signature.
+
+Expresso Eldoc displays the types (& kinds) 
+of standard library functions (& types) and of builtins.
+
+Expresso's Standard Library is defined in these files:
+
+• « lib/Prelude.x »
+• « lib/List.x »
+• « lib/Text.x »
+
+Links:
+
+• URL `https://github.com/willtim/Expresso/tree/0.1.2.0/lib'"
+
+  ())                                   ;TODO
+
+;;----------------------------------------------;;
+;; Menu ----------------------------------------;;
+;;----------------------------------------------;;
+
+(easy-menu-define expresso-mode-menu expresso-mode-map
+
+  "Menu for Expresso Mode."
+
+  `("Expresso"
+
+    ["Customize"          (customize-group 'expresso)]
+    "---"
+    ["Indent line"        indent-according-to-mode]
+    ["(Un)Comment region" comment-region mark-active]
+    "---"
+    ,(if (default-boundp 'eldoc-documentation-function)
+         ["Doc mode" eldoc-mode
+          :style toggle :selected (bound-and-true-p eldoc-mode)]
+       ["Doc mode" expresso-doc-mode
+        :style toggle :selected (and (boundp 'expresso-doc-mode) expresso-doc-mode)])
+    "---"
+    ))
+
+;;----------------------------------------------;;
+;; Completion ----------------------------------;;
+;;----------------------------------------------;;
+
+(cl-defun expresso-read-file (&key directory (recursive t) prompt)
+
+  "Read an Expresso file (with completion).
+
+Inputs:
+
+• DIRECTORY — a `stringp'.
+  A directory filepath.
+  Defaults to `default-directory'.
+
+• RECURSIVE — a `booleanp'.
+  Whether to search DIRECTORY's subdirectories (i.e. recursively),
+  or just its files (i.e. non-recursively).
+  Defaults to `t' (i.e. recursively).
+
+• PROMPT — a `stringp'.
+  A prompt for the user (without a trailing colon & space).
+
+Users:
+
+• the « import » statement (in an Expresso file).
+• the « :load » subcommand (in the Expresso REPL)."
+
+  (interactive)
+
+  ;;(cl-check-type directory (or string nil))
+  ;;(cl-check-type recursive boolean)
+
+  (let* ((PROMPT (format "%s: " (or prompt
+                                    "Expresso File")))
+         (DIRECTORY  (or directory default-directory))
+         (FILES-INCLUSIVE (expresso-list-files :directory DIRECTORY :recursive recursive))
+         (FILE-CURRENT (buffer-file-name))
+         (FILES-EXCLUSIVE               ; exclude the current file, if present (i.e. no recursive imports).
+          (if FILE-CURRENT
+              (seq-remove (lambda (s) (equal s FILE-CURRENT))
+                          FILES-INCLUSIVE)
+            FILES-INCLUSIVE))
+         )
+
+    (let* ((FILE-ABSOLUTE (completing-read PROMPT FILES-EXCLUSIVE))
+           (FILE-RELATIVE (if FILE-CURRENT
+                              (file-relative-name FILE-ABSOLUTE DIRECTORY)
+                            FILE-ABSOLUTE))
+           )
+
+      FILE-RELATIVE)))
+
+;;----------------------------------------------;;
+
+(cl-defun expresso-list-files (&key directory (recursive t))
+
+  "List all relevant Expresso files.
+
+Inputs:
+
+• DIRECTORY — a `stringp'.
+  A directory filepath.
+  Defaults to `default-directory'.
+
+• RECURSIVE — a `booleanp'.
+  Whether to search DIRECTORY's subdirectories (i.e. recursively),
+  or just its files (i.e. non-recursively).
+  Defaults to `t'.
+
+Output:
+
+• a `listp' of `stringp's."
+
+  ;;(cl-check-type directory (or string nil))
+  ;;(cl-check-type recursive boolean)
+
+  (let* ((DIRECTORY  (or directory default-directory))
+         (REGEX      (rx "." (or "x" "expresso") eos))
+         (RECURSIVE? (or recursive))
+         )
+
+    (if RECURSIVE?
+        (directory-files-recursively DIRECTORY REGEX)
+      (directory-files DIRECTORY nil REGEX))))
+
+;;----------------------------------------------;;
+;; Keymaps -------------------------------------;;
+;;----------------------------------------------;;
+
+(defvar expresso-mode-map
+
+  (let ((KEYMAP (make-sparse-keymap)))
+
+    (define-key KEYMAP (kbd "C-c C-h") #'expresso-mode-help)
+
+    KEYMAP)
+
+  "Keymap for `expresso-mode'.
+
+its “Prefix Command” is bound to « \\[expresso-mode-keymap] ».
+
+its current bindings are:
+
+\\{expresso-mode-keymap}")
+
+;;----------------------------------------------;;
+
+(define-prefix-command 'expresso-mode-map nil "🍵 Expresso")
 
 ;;----------------------------------------------;;
 ;; Mode ----------------------------------------;;
@@ -967,67 +1094,208 @@ Call `expresso-program-version' to get the version of the currently-registered c
 
   (progn
 
-    (setq font-lock-defaults (list nil nil))
+    ;; Font Lock:
 
     (set-syntax-table expresso-mode-syntax-table)
 
+    (setq font-lock-defaults (list nil nil))
+
+    (setq-local syntax-propertize-function #'expresso-syntax-propertize)
+
+    ;; Comments:
+
+    (setq-local comment-start      expresso-comment-start)
+    (setq-local comment-padding    expresso-comment-padding)
+    (setq-local comment-start-skip expresso-comment-start-skip)
+    (setq-local comment-end        expresso-comment-end)
+    (setq-local comment-end-skip   expresso-comment-end-skip)
+
+    ;; Paragraphs:
+
+    (setq-local paragraph-start    expresso-paragraph-start)
+    (setq-local paragraph-separate expresso-paragraph-separate)
+
+    (setq-local fill-paragraph-function #'expresso-fill-paragraph)
+    (setq-local adaptive-fill-function  #'expresso-adaptive-fill)
+
+    ;; Movement:
+
+    (setq-local forward-sexp-function #'expresso-forward-sexp)
+    (setq-local parse-sexp-ignore-comments nil)
+
+    ;; Indentation:
+
+    (setq-local indent-tabs-mode                nil)
+    (setq-local comment-auto-fill-only-comments t)
+
+    (when (boundp 'electric-indent-inhibit)
+      (setq electric-indent-inhibit t))
+
+    ;; ElDoc:
+
+    (add-function :before-until (local 'eldoc-documentation-function)
+                   #'expresso-doc-current-info)
+
+    ;; IMenu:
+
+    (setq-local imenu-create-index-function #'expresso-ds-create-imenu-index)
+
     #'expresso-mode))
 
-  ;; paragraph-{start,separate} should treat comments as paragraphs as well.
-  (setq-local paragraph-start (concat " *{-\\| *-- |\\|" page-delimiter))
-  (setq-local paragraph-separate (concat " *$\\| *\\({-\\|-}\\) *$\\|" page-delimiter))
-  (setq-local fill-paragraph-function 'expresso-fill-paragraph)
-  ;; (setq-local adaptive-fill-function 'expresso-adaptive-fill)
-  (setq-local comment-start "-- ")
-  (setq-local comment-padding 0)
-  (setq-local comment-start-skip "[-{]-[ \t]*")
-  (setq-local comment-end "")
-  (setq-local comment-end-skip "[ \t]*\\(-}\\|\\s>\\)")
-  (setq-local forward-sexp-function #'expresso-forward-sexp)
-  (setq-local parse-sexp-ignore-comments nil)
-  (setq-local syntax-propertize-function #'expresso-syntax-propertize)
+;;----------------------------------------------;;
+;; REPL ----------------------------------------;;
+;;----------------------------------------------;;
 
-  ;; Set things up for eldoc-mode.
-  (setq-local eldoc-documentation-function 'expresso-doc-current-info)
-  ;; Set things up for imenu.
-  (setq-local imenu-create-index-function 'expresso-ds-create-imenu-index)
-  ;; Set things up for font-lock.
-  (setq-local font-lock-defaults
-              '((expresso-font-lock-keywords)
-                nil nil nil nil
-                (font-lock-syntactic-face-function
-                 . expresso-syntactic-face-function)
-                ;; Get help from font-lock-syntactic-keywords.
-                (parse-sexp-lookup-properties . t)
-                (font-lock-extra-managed-props . (composition expresso-type))))
-  ;; Preprocessor definitions can have backslash continuations
-  (setq-local font-lock-multiline t)
-  ;; Expresso's layout rules mean that TABs have to be handled with extra care.
-  ;; The safer option is to avoid TABs.  The second best is to make sure
-  ;; TABs stops are 8 chars apart, as mandated by the Expresso Report.  --Stef
-  (setq-local indent-tabs-mode nil)
-  (setq-local tab-width 8)
-  (setq-local comment-auto-fill-only-comments t)
-  ;; Expresso is not generally suitable for electric indentation, since
-  ;; there is no unambiguously correct indent level for any given line.
-  (when (boundp 'electric-indent-inhibit)
-    (setq electric-indent-inhibit t))
+(defgroup expresso nil
 
-  ;; dynamic abbrev support: recognize Expresso identifiers
-  ;; Expresso is case-sensitive language
-  (setq-local dabbrev-case-fold-search nil)
-  (setq-local dabbrev-case-distinction nil)
-  (setq-local dabbrev-case-replace nil)
-  (setq-local dabbrev-abbrev-char-regexp "\\sw\\|[.]")
-  (setq expresso-literate nil)
-  (add-hook 'before-save-hook 'expresso-mode-before-save-handler nil t)
-  (add-hook 'after-save-hook 'expresso-mode-after-save-handler nil t)
-  ;; provide non-interactive completion function
-  (add-hook 'completion-at-point-functions
-            'expresso-completions-completion-at-point
-            nil
-            t)
-  (expresso-indentation-mode)
+  "Expresso Expression Language."
+
+  :prefix "expresso-"
+  :group 'languages)
+
+;;----------------------------------------------;;
+
+(defcustom expresso-program "expresso"
+
+  "Path to the program used by `inferior-expresso'."
+
+  :type #'string
+  :group 'expresso)
+
+;;----------------------------;;
+
+(defcustom expresso-arguments '()
+
+  "Commandline arguments to pass to `expresso-program'."
+
+  :type #'string
+  :group 'expresso)
+
+;;----------------------------;;
+
+(defcustom expresso-prompt-regexp
+
+  "λ>"
+
+  "Regexp for matching `inferior-expresso' prompt."
+
+  :type #'string
+  :group 'expresso)
+
+;;----------------------------;;
+
+(defcustom expresso-repl-commands
+
+  '("{"
+    "cd"
+    "env"
+    "h"
+    "help"
+    "load"
+    "peek"
+    "quit"
+    "reset"
+    "type"
+    )
+
+  "Expresso REPL commands (e.g. « :help »).
+
+a `listp' of `stringp's."
+
+  :type #'listp
+  :group 'expresso)
+
+;;----------------------------;;
+
+(defcustom inferior-expresso-buffer-name
+
+  "*expresso*"
+
+  "Buffer name for `inferior-expresso'."
+
+  :type #'string
+  :group 'expresso)
+
+;;----------------------------------------------;;
+
+;;;###autoload
+(defun inferior-expresso (&optional name)
+
+    "Run an inferior instance of program `expresso' within Emacs.
+
+• NAME — a `stringp' or `bufferp'.
+  defaults to `inferior-expresso-buffer-name'."
+
+    (interactive "P")
+
+    (let* ((PROGRAM expresso-program)
+           (BUFFER-NAME (or name inferior-expresso-buffer-name))
+           (BUFFER      (get-buffer-create BUFFER-NAME))
+         )
+
+      (when (not (comint-check-proc inferior-expresso-buffer-name))
+            (apply #'make-comint-in-buffer "expresso" inferior-expresso-buffer-name PROGRAM expresso-arguments))
+      (pop-to-buffer-same-window inferior-expresso-buffer-name)
+      (inferior-expresso-mode)))
+
+;;----------------------------------------------;;
+
+(defun inferior-expresso-initialize ()
+
+    "Initialize `inferior-expresso-mode'."
+
+    (setq comint-use-prompt-regexp t))
+
+;;----------------------------------------------;;
+
+(define-derived-mode inferior-expresso-mode comint-mode "expresso"
+
+  "Major mode for the Expresso REPL.
+
+
+
+Keymap:
+
+\\<inferior-expresso-mode-map>"
+
+  nil
+  "expresso"
+
+  (progn
+
+  (setq comint-prompt-regexp expresso-prompt-regexp)
+  (setq comint-prompt-read-only t)
+
+  (setq-local font-lock-defaults '(expresso-font-lock-keywords t))
+  (setq-local paragraph-start expresso-prompt-regexp)
+  (setq-local indent-line-function #'expresso-indent-line)
+
+  ())
+
+;;----------------------------------------------;;
+;; Functions -----------------------------------;;
+;;----------------------------------------------;;
+
+(defun expresso-program-execute (&rest arguments)
+
+  "Invoke `expresso-program' with ARGUMENTS.
+
+Output:
+
+• a `stringp'.
+
+Examples:
+
+• M-: (expresso-program-execute \"--version\")
+    ; equivalent to « $ expresso --version »
+    ⇒ 
+
+"
+
+  (let (
+        )
+
+   (shell-command expresso-program arguments)))
 
 ;;----------------------------------------------;;
 ;; Commands ------------------------------------;;
@@ -1128,31 +1396,208 @@ list marker of some kind), and end of the obstacle."
         (setf arg (1- arg))))))
 
 ;;----------------------------------------------;;
-;; Functions -----------------------------------;;
+;;; Utilities ----------------------------------;;
 ;;----------------------------------------------;;
 
-;;----------------------------------------------;;
+(defun expresso--regexp-opt (strings)
 
-(defun expresso-program-execute (&rest arguments)
+  "Return a regular expression matching anything in STRINGS.
 
-  "Invoke `expresso-program' with ARGUMENTS.
+Inputs:
+
+• STRINGS — a `listp' of `stringp's.
 
 Output:
 
-• a `stringp'.
+• a `regexp'.
+  Matches a syntactic symbol (see Info Node `(emacs) ') which is in STRINGS.
 
 Examples:
 
-• M-: (expresso-program-execute \"--version\")
-    ; equivalent to « $ expresso --version »
-    ⇒ 
+• M-: (expresso--regexp-opt '(\"abc\" \"123\"))
+      \"\\_<\\(123\\|abc\\)\\_>\"
 
-"
+Notes:
 
-  (let (
-        )
+• Boundaries are respected.
+  i.e. the output doesn't match substrings
+  within a word or symbol, only the entire string.
 
-   (shell-command expresso-program arguments)))
+Related:
+
+• Calls `regexp-opt'"
+
+  (let* ((STRINGS (identity strings))
+         )
+    (regexp-opt STRINGS 'symbols)))
+
+;; ^ e.g.:
+;;
+;; • M-: (expresso--regexp-opt '("def" "123"))
+;;     → "\\_<\\(123\\|def\\)\\_>"
+;;
+;; • M-: (if (string-match-p (expresso--regexp-opt '("def" "123")) "def") t nil)
+;;     → t
+;; • M-: (if (string-match-p (expresso--regexp-opt '("def" "123")) "abcdef") t nil)
+;;     → nil
+;; • M-: (if (string-match-p (expresso--regexp-opt '("def" "123")) "defghi") t nil)
+;;     → nil
+;;
+;; 
+
+;;----------------------------------------------;;
+;; Effects -------------------------------------;;
+;;----------------------------------------------;;
+
+(progn
+
+  (add-hook 'auto-mode-alist (cons (rx ".x" eos) #'expresso-mode))
+
+  (add-hook 'inferior-expresso-mode-hook #'inferior-expresso-initialize)
+
+  ())
+
+;;----------------------------------------------;;
+;; Examples ------------------------------------;;
+;;----------------------------------------------;;
+
+;; e.g. the Expresso REPL:
+;; 
+;;     $ expresso
+;;     
+;;     Expresso 0.1.2.0 REPL
+;;     Type :help or :h for a list of commands
+;;     Loading Prelude from /home/sboo/haskell/Expresso/lib/Prelude.x
+;;     λ> :h
+;;     REPL commands available from the prompt:
+;;     <expression>                evaluate an expression
+;;     :peek <expression>          evaluate, but not deeply
+;;     :load <filename>            import record expression as a module
+;;     :{\n ..lines.. \n:}\n       multiline command
+;;     :cd <path>                  change current working directory
+;;     :type <term>                show the type of <term>
+;;     :reset                      reset REPL, unloading all definitions
+;;     :env                        dump bound symbols in the environment
+;;     :quit                       exit REPL
+;;     :help                       display this list of commands
+;;
+
+;; « :env »
+;;
+;;   λ> :env
+;;   
+;;   all           : forall a        . (a -> Bool) -> [a] -> Bool
+;;   and           :                    [Bool] -> Bool
+;;   any           : forall a        . (a -> Bool) -> [a] -> Bool
+;;   catMaybes     : forall a        . [Maybe a] -> [a]
+;;   concat        : forall a        . [[a]] -> [a]
+;;   const         : forall a b      . b -> a -> b
+;;   either        : forall a a1 b   . (a1 -> b) -> (a -> b) -> Either a1 a -> b
+;;   elem          : forall a        . (Eq a) => a -> [a] -> Bool
+;;   filter        : forall a        . (a -> Bool) -> [a] -> [a] -> [a]
+;;   foldl         : forall a b      . (b -> a -> b) -> b -> [a] -> b
+;;   foldr         : forall a b      . (a -> b -> b) -> b -> [a] -> b
+;;   fromMaybe     : forall b        . b -> Maybe b -> b
+;;   id            : forall b        . b -> b
+;;   isJust        : forall a        . Maybe a -> Bool
+;;   isNothing     : forall a        . Maybe a -> Bool
+;;   just          : forall a        . a -> Maybe a
+;;   left          : forall a b      . a -> Either a b
+;;   length        : forall a        . [a] -> Int
+;;   listToMaybe   : forall a        . [a] -> Maybe a
+;;   map           : forall a a1     . (a -> a1) -> [a] -> [a1]
+;;   mapMaybe      : forall a a1     . (a -> a1) -> Maybe a -> Maybe a1
+;;   maybe         : forall a b      . b -> (a -> b) -> Maybe a -> b
+;;   maybeToList   : forall a        . Maybe a -> [a]
+;;   mkOverridable : forall b r      . (r\override_) => ({r} -> {r}) -> {override_ : ({r} -> b) -> {r} -> b | r}
+;;   notElem       : forall a        . (Eq a) => a -> [a] -> Bool
+;;   nothing       : forall a        . Maybe a
+;;   null          : forall a        . [a] -> Bool
+;;   or            :                    [Bool] -> Bool
+;;   override      : forall a b r r1 . (r\override_, r1\override_) => {override_ : a -> {r} -> {r} | r1} -> a -> {override_ : ({r} -> b) -> {r} -> b | r}
+;;   right         : forall a b      . b -> Either a b
+;;
+
+;; « :type »
+;;
+;;   λ> :type all
+;;   forall a. (a -> Bool) -> [a] -> Bool
+;;   
+;;   λ> :type Bool
+;;   forall a r. (r\Bool) => a -> <Bool : a | r>
+;;
+
+;;----------------------------------------------;;
+
+;; e.g. Expresso expressions:
+;; 
+;; λ> let sqmag = r -> r.x*r.x + r.y*r.y
+;; 
+;; λ> {| x = "foo" |} >> {| x := "bar" |} -- Type checks
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
+;; 
+;; λ> 
 
 ;;----------------------------------------------;;
 ;; Notes ---------------------------------------;;
@@ -1185,6 +1630,18 @@ Examples:
 ::
 ;; • URL `http://www.wilfred.me.uk/blog/2015/03/19/adding-a-new-language-to-emacs/'
 ;; • URL `http://www.wilfred.me.uk/blog/2014/09/27/the-definitive-guide-to-syntax-highlighting/'
+
+;; Syntax-Table Notes:
+;;
+;; Word constituents: ‘w’
+;; Symbol constituents: ‘_’
+;; Punctuation characters: ‘.’
+;; Open parenthesis characters: ‘(’
+;; Close parenthesis characters: ‘)’
+;; String quotes: ‘"’
+;; Comment starters: ‘<’
+;; Comment enders: ‘>’
+;;
 
 ;;----------------------------------------------;;
 ;; EOF -----------------------------------------;;

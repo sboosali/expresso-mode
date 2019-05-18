@@ -25,7 +25,7 @@ Feature=expresso-mode
 
 #------------------------------------------------#
 
-CaskFile?=./Cask
+CaskDirectory?=./
 
 #------------------------------------------------#
 # Makefile Variables: Paths ---------------------#
@@ -36,12 +36,6 @@ DataDirectory  ?=./data
 ShareDirectory ?=./gitignored/share
 
 #------------------------------------------------#
-
-#------------------------------------------------#
-# Makefile Variables: Options -------------------#
-#------------------------------------------------#
-
-EmacsOptions ?=--no-init-file --maximized --no-splash --no-desktop
 
 #------------------------------------------------#
 # Makefile Variables: Programs ------------------#
@@ -72,7 +66,11 @@ CompletionDirectory ?=$(ShareDirectory)/bash/completions
 # Makefile Variables: Options -------------------#
 #------------------------------------------------#
 
-#CaskOptions=--cask-file $(ProjectFile) --builddir $(BuildDirectory)
+EmacsOptions ?=--no-init-file --maximized --no-splash --no-desktop
+
+#------------------------------------------------#
+
+CaskOptions=--path $(CaskDirectory) --builddir $(BuildDirectory)
 
 #------------------------------------------------#
 
@@ -113,6 +111,8 @@ build:
 
 .PHONY: build
 
+;; “Byte compile all package files. The .elc files are placed in the same directory as the source file.”
+
 #------------------------------------------------#
 
 check:
@@ -126,6 +126,42 @@ clean:
 	$(Cask) clean-elc
 
 .PHONY: clean
+
+#------------------------------------------------#
+# Makefile Targets: Custom ----------------------#
+#------------------------------------------------#
+
+emacs27:
+
+	EMACS="emacs27.1"
+
+.PHONY: emacs27
+
+
+#------------------------------------------------#
+
+emacs26:
+
+	EMACS="emacs26.1"
+
+.PHONY: emacs26
+
+#------------------------------------------------#
+
+emacs25:
+
+	EMACS="emacs25.3"
+
+.PHONY: emacs25
+
+#------------------------------------------------#
+# Makefile Targets: Custom ----------------------#
+#------------------------------------------------#
+
+print:
+
+	$(Cask) info
+	$(Cask) files
 
 #------------------------------------------------#
 # EOF -------------------------------------------#
