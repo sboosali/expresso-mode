@@ -38,4 +38,339 @@
 
 
 
+
+
+expresso-shell-dwim
+
+"DWIM: start shell or switch to it."
+
+
+
+(defun expresso-send-region-to-shell (beg end)
+
+  "Send region (between BEG and END) to the Expresso REPL.
+
+Inputs:
+
+• BEG — an `integerp'.
+• END — an `integerp'."
+
+  (interactive "r")
+
+  (let* ((STRING (buffer-substring-no-properties beg end))
+       )
+
+  (expresso-comint-send-string STRING)))
+```
+
+``` elisp
+(defun expresso-send-buffer-to-shell (&optional buffer)
+
+  "Send BUFFER to the Expresso REPL.
+
+Inputs:
+
+• BUFFER — a `bufferp'."
+
+  (interactive)
+
+  (let* ((BUFFER (current-buffer))
+       )
+
+  (with-current-buffer BUFFER
+
+    (expresso-send-region-to-shell (point-min) (point-max)))))
+
+
+
+
+
+
+
+REPL
+
+
+
+defun inferior-expresso/get-or-create-buffer
+
+  "Get buffer named `inferior-expresso-buffer-name'.
+
+
+defun inferior-expresso/get-process
+
+  "Get process of `inferior-expresso-buffer-name'
+
+
+
+
+
+inferior-expresso-mode
+
+deflist expresso-rc-string
+
+  "Initialization for `run-expresso'.
+
+a `stringp' (split by newline), or a `listp' of `stringp's (one per line).
+
+Related:
+
+• `expresso-rc-file'."
+ 
+
+
+defpath expresso-rc-file
+
+  "Initialization for `run-expresso'.
+
+a `stringp'; a (readable) filepath.
+
+Implementation:
+
+• See STARTFILE in `make-comint-in-buffer'."
+
+
+defaccessor expresso-rc
+
+
+
+
+
+
+
+
+run-expresso
+
+(defvar expresso-mode-map
+
+    (define-key map "\t" #'completion-at-point) KEYMAP)
+
+  "Mode `keymapp' for `run-expresso'.")
+
+
+
+(cl-defun run-expresso (&key cmd args rc)
+
+  "Run an Expresso REPL (inside Emacs).
+
+Inputs:
+
+• CMD — a `stringp' (executable filepath).
+  Defaults to `expresso-program'.
+
+• ARGS — a `listp' of `stringp'.
+  Defaults to `expresso-arguments'.
+
+• RC — a `stringp' (readable filepath).
+  Defaults to function `expresso-rc'.
+
+Effects:
+
+• Spawns (or finds) an `inferior-expresso-mode' process.
+
+The command `run-expresso' is an “inferior instance” of the program `expresso'."
+
+  (interactive )
+
+  (let* ((PROGRAM   (or cmd expresso-program (executable-find "expresso")))
+         (ARGUMENTS (or args expresso-arguments '()))
+         (STARTFILE (or rc (expresso-rc)))
+
+         (PROCESS-NAME "Expresso")
+         (BUFFER-NAME  "*Expresso*")
+         (BUFFER       (comint-check-proc PROCESS))
+        )
+
+    ;; (A) 
+    ;; Pop to the ⟨ "*expresso*" ⟩ buffer if either:
+    ;; (1) the process is dead, or
+    ;; (2) the buffer is missing, or
+    ;; (3) the buffer's got the wrong mode.
+
+    (pop-to-buffer-same-window
+
+     (if (or BUFFER (not (derived-mode-p 'expresso-mode)) (comint-check-proc (current-buffer)))
+
+         (get-buffer-create (or BUFFER BUFFER-NAME))
+
+       (current-buffer)))
+
+    ;; (B) 
+    ;; Create the Comint process, unless there already is a buffer.
+
+    (unless BUFFER
+
+      (apply #'make-comint-in-buffer PROCESS-NAME BUFFER PROGRAM STARTFILE ARGUMENTS)
+
+      (expresso-mode))))
+
+
+
+
+
+
+(cl-defun expresso/shell-make-comint (&key cmd args rc show)
+
+  "Run an Expresso REPL (inside Emacs).
+
+Inputs:
+
+• CMD — a `stringp' (executable filepath).
+  Defaults to `expresso-program'.
+
+• ARGS — a `listp' of `stringp'.
+  Defaults to `expresso-arguments'.
+
+• RC — a `stringp' (readable filepath).
+  Defaults to function `expresso-rc'.
+
+• SHOW — a `booleanp'.
+  Whether to `display-buffer'.
+
+Effects:
+
+• Spawns (or finds) an `inferior-expresso-mode' process.
+• Displays the `inferior-expresso-mode' buffer (optionally).
+
+The command `run-expresso' is an “inferior instance” of the program `expresso'."
+
+   (when show
+      (display-buffer BUFFER))
+
+
+
+
+
+
+
+(define-derived-mode inferior-expresso-mode comint-mode "Inferior Expresso"
+
+  "Major mode for Expresso REPL (an inferior process)."
+
+  (setq-local indent-tabs-mode nil)
+
+  (setq mode-line-process '(":%s"))
+
+  (setq-local comint-prompt-read-only t)
+
+  (setq-local comint-prompt-regexp (rx bol "λ>" space))
+
+  
+
+  ())
+
+
+
+
+
+
+COMPLETION
+
+« import " » completes with filenames, with a proper extension.
+
+
+
+
+
+
+
+
+
+
+« : » completes in REPL
+
+e.g.:
+
+λ> :peek {x = "foo"}
+{x = <Thunk>}
+
+
+
+
+
+SYNTAX
+
+
+; « (: … ) »
+
+(:T) ≈ id : T -> T
+
+e.g. (: forall a. a) 1
+
+
+
+
+INDENTATION
+
+
+
+
+
+
+
+
+ELDOC
+
+
+
+
+
+
+
+CODE
+
+;;; MODE
+
+
+  (setq-local font-lock-defaults '(expresso-font-lock-keywords))
+
+  (setq-local font-lock-syntactic-keywords)
+       (list
+        `(,expresso-char-regex
+          (1 "\"") ; Treat ' as a string delimiter.
+          (2 ".") ; Don't highlight anything between the open and close '.
+          (3 "\"")); Treat the close ' as a string delimiter.
+        `(,expresso-triple-quoted-string-regex
+          (1 "\"") ; Treat the first " in """ as a string delimiter.
+          (2 ".") ; Don't highlight anything between.
+          (3 "\"")) ; Treat the last " in """ as a string delimiter.
+	))
+
+  (setq-local indent-line-function #'expresso-indent-line)
+
+  (setq-local expresso-basic-offset 4)
+  (setq indent-tabs-mode nil)
+
+  (setq imenu-generic-expression expresso-imenu-generic-expression)
+  (imenu-add-to-menubar "Imenu"))
+
+
+
+
+
+
+
+
+ISSUE
+
+XDG Conformance [feature request]
+
+[feature request]
+
+verbose file extension [feature request]
+.expresso
+
+.x include:
+3D image file used by DirectX
+SunRPC-based protocol description file
+
+
+
+
+
+========================================
+
+
+
+
+
 ========================================

@@ -5,7 +5,7 @@
 ;; Version: 0.0.0
 ;; Package-Requires: ((emacs "25") seq pcase)
 ;; Author:  Spiros Boosalis <samboosalis@gmail.com>
-;; Homepage: https://github.com/sboosali/expresso-mode
+;; Homepage: https://github.com/sboosali/expresso-mode#readme
 ;; Keywords: language faces
 ;; Created: 01 May 2019
 
@@ -26,18 +26,46 @@
 
 ;;; Commentary:
 
-;; Major mode for editing Expresso files (« .x » extension).
+;; Major mode for editing Expresso files and running Expresso REPLs.
 ;;
-;; Commands:
+;; Features include:
+;;
+;; • Edit Expresso expression (« .x » files).
+;; • Run Expresso commands (the « expresso ») file.
+;;
+;; Commands include:
 ;;
 ;; • `expresso-mode'
+;; • `run-expresso'
+;; • `expresso-eval-dwim'
 ;;
-;; Variables:
+;; Variables include:
 ;;
 ;; • `expresso-builtin-keywords-list'
 ;; • `expresso-builtin-operators-list'
 ;;
+;; Configuration:
+;;
+;;     (use-package expresso-mode
+;;       :commands    (expresso-mode run-expresso expresso-eval-dwim)
+;;       :bind        (:map expresso-mode-map ("C-c C-e" . expresso-eval-dwim))
+;;       :auto        ("\\.x\\'" . expresso-mode)
+;;       :interpreter ("expresso" . expresso-mode)
+;;       :preface     (setq expresso-setup-p nil)
+;;       :config      ())
 ;; 
+;; Installation:
+;;
+;; • install from source — « $ wget https://raw.githubusercontent.com/sboosali/expresso-mode/master/expresso-mode.el ».
+;; • install from MELPA (via `package-install') — « M-x package-install RET expresso-mode RET ».
+;;
+;; If installation isn't successful, you can still interact with an Expresso REPL via `comint-run':
+;;
+;;     M-: (comint-run "expresso")
+;;
+;; 
+;;
+;;
 
 ;;; Code:
 
@@ -58,14 +86,30 @@
   (require 'seq))
 
 ;;----------------------------------------------;;
+;; Macros --------------------------------------;;
+;;----------------------------------------------;;
+
+;;----------------------------------------------;;
+;; Constants -----------------------------------;;
+;;----------------------------------------------;;
+
+(defconst expresso-mode-help-buffer-name
+
+  "*Help Expresso Mode Tutorial*"
+
+  "`buffer-name' for `expresso-mode-help'.")
+
+;;; Major Mode...
+
+;;----------------------------------------------;;
 ;; Variables -----------------------------------;;
 ;;----------------------------------------------;;
 
-(defgroup expresso
+(defgroup expresso nil
 
-  nil
+  "Expresso Expression Language
 
-  "Customize the behavior of `expresso-mode'."
+Customize the behavior/appearence of `expresso-mode'."
 
   :link (url-link :tag "GitHub" "https://github.com/sboosali/expresso-mode#readme")
 
@@ -84,9 +128,58 @@
   :safe #'listp
   :group 'expresso)
 
+;;==============================================;;
+
+(defvar expresso-setup-p t
+
+  "Setup Expresso when Requiring (or Autoloading) « expresso-mode.el ».
+
+If `expresso-setup-p' is:
+
+• t   — Expresso Mode will be setup automatically.
+• nil — Expresso Mode must be setup manually, via `expresso-setup'.
+
+Example:
+
+    ;; Don't setup Expresso automatically:
+    (setq expresso-setup-p nil)
+    (require 'expresso-mode)
+
+Related:
+
+• `expresso-setup'.")
+
+;;----------------------------------------------;;
+;; Hooks ---------------------------------------;;
 ;;----------------------------------------------;;
 
+(defcustom expresso-mode-hook
 
+  '()
+
+  "Commands to run after `expresso-mode' is enabled.
+
+Type: a `listp' of `functionp's.
+
+Use to enable minor modes coming with `expresso-mode' or run an
+arbitrary function.
+
+Note that  `expresso-indentation-mode' and `expresso-indent-mode' should not be
+run at the same time."
+
+  :options '(superword-mode
+             subword-mode
+
+             flyspell-prog-mode
+             highlight-uses-mode
+
+             ;; interactive-expresso-mode
+             ;; expresso-decl-scan-mode
+             ;; expresso-indentation-mode
+            )
+
+  :type 'hook
+  :group 'expresso)
 
 
 
@@ -141,44 +234,6 @@
 See URL `https://github.com/willtim/Expresso/blob/master/src/Expresso/Parser.hs'.")
 
 
-(defcustom expresso-mode-keywords
-
-  '(
- "import"
-  "forall" "type"
-  "let" "in" "case" "of" "override"
-  "if" "then" "else" 
-
- "Int"
- "Double"
- "Bool"
- "Char"
- "Text"
-
- "Eq" "Ord" "Num"
-  "_"
-  "fix" 
-  "True" "False"
-
-   fun "error"   ErrorPrim
-  , fun "show"    Show
-  , fun "not"     Not
-  , fun "uncons"  ListUncons
-  , fun "fix"     FixPrim
-  , fun "double"  Double
-  , fun "floor"   Floor
-  , fun "ceiling" Ceiling
-  , fun "abs"     Abs
-  , fun "mod"     Mod
-  , fun "absurd"  Absurd
-  , fun "pack"    Pack
-  , fun "unpack"  Unpack
-
-  )
-
-  "
-
-See URL `https://github.com/willtim/Expresso/blob/master/src/Expresso/Parser.hs'.")
 
 
 
@@ -229,23 +284,6 @@ See URL `https://github.com/willtim/Expresso/blob/master/src/Expresso/Parser.hs'
 
 
 
-(define-derived-mode expresso-mode-mode prog-mode "Expresso Mode"
-
-  :syntax-table expresso-mode-mode-syntax-table
-
-
-  (font-lock-fontify-buffer))
-
-
-"Expresso is a (lightweight) records-based expression language.
-
-
-
-“Expresso is a minimal statically-typed functional programming language, designed with embedding and/or extensibility in mind. Possible use cases for such a minimal language include configuration (à la Nix), data exchange (à la JSON) or even a starting point for a custom external DSL.”
-
-Links:
-
-• URL `https://github.com/willtim/Expresso#readme'"
 
 
 
@@ -276,15 +314,15 @@ Links:
 
 
 
-;;----------------------------------------------;;
-;; Constants -----------------------------------;;
-;;----------------------------------------------;;
 
-(defconst expresso-mode-help-buffer-name
 
-  "*Help Expresso Mode Tutorial*"
 
-  "`buffer-name' for `expresso-mode-help'.")
+
+
+
+
+
+
 
 ;;----------------------------------------------;;
 ;; Variables -----------------------------------;;
@@ -292,13 +330,26 @@ Links:
 
 (defcustom expresso-keywords
 
-  '(
-    ""
-   )
+  '("import"
+    "forall"
+    "type"
+    "let"
+    "in"
+    "case"
+    "of"
+    "override"
+    "if"
+    "then"
+    "else" 
+    )
 
-  "`expresso' keywords.
+  "Expresso keywords.
 
-a `listp' of `stringp's."
+a `listp' of `stringp's.
+
+Links:
+
+• URL `https://github.com/willtim/Expresso/blob/master/src/Expresso/Parser.hs'."
 
   :type '(repeated (string :tag "Keyword"))
 
@@ -309,11 +360,23 @@ a `listp' of `stringp's."
 
 (defcustom expresso-builtin-functions
 
-  '(
-    ""
+  '("fix"  
+    "error"
+    "show"
+    "not"
+    "uncons"
+    "fix"
+    "double"
+    "floor"
+    "ceiling"
+    "abs"
+    "mod"
+    "absurd"
+    "pack"
+    "unpack"
    )
 
-  "Names of functions built-into `expresso'.
+  "Names of functions built-into Expresso.
 
 a `listp' of `stringp's."
 
@@ -326,11 +389,14 @@ a `listp' of `stringp's."
 
 (defcustom expresso-builtin-types
 
-  '(
-    ""
+  '("Int"
+    "Double"
+    "Bool"
+    "Char"
+    "Text"
    )
 
-  "Names of types built-into `expresso'.
+  "Names of types built-into Expresso.
 
 a `listp' of `stringp's."
 
@@ -341,10 +407,76 @@ a `listp' of `stringp's."
 
 ;;----------------------------------------------;;
 
+(defcustom expresso-builtin-classes
+
+  '("Eq"
+    "Ord"
+    "Num"
+   )
+
+  "Names of classes built-into Expresso.
+
+a `listp' of `stringp's."
+
+  :type '(repeated (string :tag "Class (Builtin)"))
+
+  :safe #'listp
+  :group 'expresso)
+
+;;----------------------------------------------;;
+
+(defcustom expresso-builtin-constructors
+
+  '("True"
+    "False"
+   )
+
+  "Names of constructors built-into Expresso.
+
+a `listp' of `stringp's."
+
+  :type '(repeated (string :tag "Constructor"))
+
+  :safe #'listp
+  :group 'expresso)
+
+;;----------------------------------------------;;
+
+(defcustom expresso-builtin-operators
+
+  '("-"
+   )
+
+  "Names of operators built-into Expresso.
+
+a `listp' of `stringp's."
+
+  :type '(repeated (string :tag "Operator"))
+
+  :safe #'listp
+  :group 'expresso)
+
+;;----------------------------------------------;;
+
+(defcustom expresso-builtin-constants
+
+  '("_"
+   )
+
+  "Names of constants (and special variables) built-into Expresso.
+
+a `listp' of `stringp's."
+
+  :type '(repeated (string :tag "Constant"))
+
+  :safe #'listp
+  :group 'expresso)
+
+;;----------------------------------------------;;
+
 (defcustom expresso-file-regexps
 
-  '(
-    "\\.xxx-file-extension-xxx\\'"
+  '("\\.x\\'"
    )
 
   "Match a `expresso-mode' file.
@@ -358,6 +490,22 @@ See `auto-mode-alist' for the syntax."
 
   :safe #'listp
   :group 'expresso)
+
+;;----------------------------------------------;;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -394,38 +542,6 @@ See `auto-mode-alist' for the syntax."
 
 
 
-
-;;----------------------------------------------;;
-;; Hooks ---------------------------------------;;
-;;----------------------------------------------;;
-
-(defcustom expresso-mode-hook
-
-  '()
-
-  "Commands to run after `expresso-mode' is enabled.
-
-Type: a `listp' of `functionp's.
-
-Use to enable minor modes coming with `expresso-mode' or run an
-arbitrary function.
-
-Note that  `expresso-indentation-mode' and `expresso-indent-mode' should not be
-run at the same time."
-
-  :options '(superword-mode
-             subword-mode
-
-             flyspell-prog-mode
-             highlight-uses-mode
-
-             ;; interactive-expresso-mode
-             ;; expresso-decl-scan-mode
-             ;; expresso-indentation-mode
-            )
-
-  :type 'hook
-  :group 'expresso)
 
 ;;----------------------------------------------;;
 ;; Faces ---------------------------------------;;
@@ -497,6 +613,17 @@ Customize the appearence of `expresso-mode'."
 
 ;;----------------------------------------------;;
 
+(defface expresso-variable-face
+
+  '((t :inherit font-lock-variable-name-face)
+    )
+
+  "Face for Expresso variables."
+
+  :group 'expresso-faces)
+
+;;----------------------------------------------;;
+
 (defface expresso-function-face
 
   '((t :inherit font-lock-function-name-face)
@@ -508,12 +635,23 @@ Customize the appearence of `expresso-mode'."
 
 ;;----------------------------------------------;;
 
-(defface expresso-variable-face
+(defface expresso-operator-face
 
-  '((t :inherit font-lock-variable-name-face)
+  '((t :inherit font-lock-keyword-face)
     )
 
-  "Face for Expresso variables."
+  "Face for Expresso operators."
+
+  :group 'expresso-faces)
+
+;;----------------------------------------------;;
+
+(defface expresso-constructor-face
+
+  '((t :inherit font-lock-constructor-name-face)
+    )
+
+  "Face for Expresso constructors."
 
   :group 'expresso-faces)
 
@@ -536,17 +674,6 @@ Customize the appearence of `expresso-mode'."
     )
 
   "Face for Expresso strings."
-
-  :group 'expresso-faces)
-
-;;----------------------------------------------;;
-
-(defface expresso-operator-face
-
-  '((t :inherit font-lock-keyword-face)
-    )
-
-  "Face for Expresso operators."
 
   :group 'expresso-faces)
 
@@ -576,10 +703,22 @@ Customize the appearence of `expresso-mode'."
 ;; expresso-operator-face         → font-lock-variable-name-face
 
 ;;----------------------------------------------;;
-;; Regexps -------------------------------------;;
+;; Functions: Regexps --------------------------;;
 ;;----------------------------------------------;;
 
-(defun expresso-builtin-regex ()
+(defun expresso-keyword-regexp ()
+
+  "Return a `regexp' matching any Expresso keyword.
+
+Customize:
+
+• Variable `expresso-keywords'"
+
+  (expresso--regexp-opt expresso-keywords))
+
+;;----------------------------------------------;;
+
+(defun expresso-builtin-regexp ()
 
   "Return a `regexp' matching any Expresso builtin.
 
@@ -591,7 +730,7 @@ Customize:
 
 ;;----------------------------------------------;;
 
-(defun expresso-type-regex ()
+(defun expresso-type-regexp ()
 
   "Return a `regexp' matching any Expresso type.
 
@@ -600,6 +739,35 @@ Customize:
 • Variable `expresso-types'"
 
   (expresso--regexp-opt expresso-types))
+
+;;----------------------------------------------;;
+;; Font Lock -----------------------------------;;
+;;----------------------------------------------;;
+
+(defvar expresso-font-lock-defaults
+
+  (let ((expresso-font-lock-keywords-only             t)   ; Search-Based Fontification
+        (expresso-font-lock-keywords-case-fold-search nil) ; Case-Insensitive
+        )
+    (list 'expresso-font-lock-keywords expresso-font-lock-keywords-only expresso-font-lock-keywords-case-fold-search))
+
+  "`font-lock-defaults' for `expresso-mode'.
+
+a `listp'.")
+
+;;----------------------------------------------;;
+
+(defvar expresso-font-lock-keywords
+
+  '(
+    
+    )
+
+  "`font-lock-defaults' for `expresso-mode'.
+
+a `listp'.")
+
+  `((,(expresso-mode-keyword-regexp) . font-lock-keyword-face))
 
 ;;----------------------------------------------;;
 ;; Syntax --------------------------------------;;
@@ -896,30 +1064,19 @@ Links:
   ())                                   ;TODO
 
 ;;----------------------------------------------;;
-;; Menu ----------------------------------------;;
-;;----------------------------------------------;;
-
-(easy-menu-define expresso-mode-menu expresso-mode-map
-
-  "Menu for Expresso Mode."
-
-  `("Expresso"
-
-    ["Customize"          (customize-group 'expresso)]
-    "---"
-    ["Indent line"        indent-according-to-mode]
-    ["(Un)Comment region" comment-region mark-active]
-    "---"
-    ,(if (default-boundp 'eldoc-documentation-function)
-         ["Doc mode" eldoc-mode
-          :style toggle :selected (bound-and-true-p eldoc-mode)]
-       ["Doc mode" expresso-doc-mode
-        :style toggle :selected (and (boundp 'expresso-doc-mode) expresso-doc-mode)])
-    "---"
-    ))
-
-;;----------------------------------------------;;
 ;; Completion ----------------------------------;;
+;;----------------------------------------------;;
+
+(cl-defun expresso-completion-at-point ()
+
+  "`completion-at-point' for `expresso-mode'.
+
+Behavior:
+
+• « import \" » completes with filenames of the proper extension."
+
+  ())
+
 ;;----------------------------------------------;;
 
 (cl-defun expresso-read-file (&key directory (recursive t) prompt)
@@ -1017,7 +1174,8 @@ Output:
 
   "Keymap for `expresso-mode'.
 
-its “Prefix Command” is bound to « \\[expresso-mode-keymap] ».
+its “Prefix Command” (function `expresso-mode-map')
+is bound to « \\[expresso-mode-keymap] ».
 
 its current bindings are:
 
@@ -1028,12 +1186,44 @@ its current bindings are:
 (define-prefix-command 'expresso-mode-map nil "🍵 Expresso")
 
 ;;----------------------------------------------;;
+;; Menu ----------------------------------------;;
+;;----------------------------------------------;;
+
+(easy-menu-define expresso-mode-menu expresso-mode-map
+
+  "Menu for Expresso Mode."
+
+  `("Expresso"
+
+    ["Customize"          (customize-group 'expresso)]
+    "---"
+    ["Indent line"        indent-according-to-mode]
+    ["(Un)Comment region" comment-region mark-active]
+    "---"
+    ,(if (default-boundp 'eldoc-documentation-function)
+         ["Doc mode" eldoc-mode
+          :style toggle :selected (bound-and-true-p eldoc-mode)]
+       ["Doc mode" expresso-doc-mode
+        :style toggle :selected (and (boundp 'expresso-doc-mode) expresso-doc-mode)])
+    "---"
+    ))
+
+;;----------------------------------------------;;
 ;; Mode ----------------------------------------;;
 ;;----------------------------------------------;;
 
 (define-derived-mode expresso-mode prog-mode "Expresso"
 
   "Major mode for editing Expresso files.
+
+Expresso is a (lightweight) records-based expression language. 
+From the language's homepage at URL `https://github.com/willtim/Expresso#readme':
+
+“Expresso is a minimal statically-typed functional programming
+ language, designed with embedding and/or extensibility in mind.
+ Possible use cases for such a minimal language include configuration
+ (à la Nix), data exchange (à la JSON) or even a starting point for a
+ custom external DSL.”
 
 ========================================
 = Configuration ========================
@@ -1088,18 +1278,23 @@ Call `expresso-version' to get the version of the currently-loaded Expresso Mode
 Call `expresso-program-version' to get the version of the currently-registered command `expresso'
 (i.e. on the environment-variable `$PATH' or `%PATH%').
 
+========================================
+= Links ================================
+========================================
+
+• URL `https://github.com/willtim/Expresso#readme'
+
 ========================================"
 
   :group 'expresso
+
+  :syntax-table expresso-mode-syntax-table
 
   (progn
 
     ;; Font Lock:
 
-    (set-syntax-table expresso-mode-syntax-table)
-
-    (setq font-lock-defaults (list nil nil))
-
+    (setq-local font-lock-defaults expresso-font-lock-defaults)
     (setq-local syntax-propertize-function #'expresso-syntax-propertize)
 
     ;; Comments:
@@ -1125,6 +1320,8 @@ Call `expresso-program-version' to get the version of the currently-registered c
 
     ;; Indentation:
 
+    (setq-local basic-offset expresso-basic-offset)
+
     (setq-local indent-tabs-mode                nil)
     (setq-local comment-auto-fill-only-comments t)
 
@@ -1133,33 +1330,63 @@ Call `expresso-program-version' to get the version of the currently-registered c
 
     ;; ElDoc:
 
-    (add-function :before-until (local 'eldoc-documentation-function)
-                   #'expresso-doc-current-info)
+    (add-function :before-until (local 'eldoc-documentation-function) #'expresso-doc-current-info)
 
     ;; IMenu:
 
     (setq-local imenu-create-index-function #'expresso-ds-create-imenu-index)
 
+    ;; Effects:
+
+    (font-lock-fontify-buffer)
+
     #'expresso-mode))
 
+* `(defvar *-hook '( _ ... ))` — a *Standard Hook*; a `listp` of `functionp`s (like `*-functions`).
+* `(defvar *-function _)` — a `functionp` (i.e. `#'...` or `(lambda (...) ...)`)
+* `(defvar *-functions '( _ ... ))` — a `listp` of `functionp`s.
+* `(defvar *-form _)`
+* `(defvar *-forms '( _ ... ))`
+* `(defvar *-program "_")` — a *Program Name*; a `stringp`. e.g. `"cabal"`.
+* `(defvar *-command '( "_" ... ))` — a *Program Invocation*; a `stringp`, or a `listp` of `stringp`s. e.g. `"cabal -v new-build all --project-file=./cabal-ghcsjs.project"` or `'("cabal" "-v" "new-build" "all" "--project-file=./cabal-ghcsjs.project")`.
+* `(defvar *-switches '( "_" ... ))` — some *Program Options*; a `listp` of `stringp`s. e.g. `'("-v" "--project-file" "./cabal-ghcsjs.project")`.
+* `(defvar *-internal )` —  `*-internal` is used internally and is *defined in C code*.
+* `(defvar <feature>--* ...)` — `<feature>--*` is used internally to `<feature>.el` (a `featurep`).
+
+;;; REPL...
+
 ;;----------------------------------------------;;
-;; REPL ----------------------------------------;;
+;; Variables: REPL -----------------------------;;
 ;;----------------------------------------------;;
 
-(defgroup expresso nil
+(defgroup inferior-expresso nil
 
-  "Expresso Expression Language."
+  "Expresso REPL.
 
-  :prefix "expresso-"
-  :group 'languages)
+Customize the behavior/appearence of `inferior-expresso-mode'."
 
-;;----------------------------------------------;;
+  :link (url-link :tag "GitHub" "https://github.com/sboosali/expresso-mode#readme")
+
+  :prefix 'expresso
+  :group 'shell
+  :group 'expresso)
+
+;;==============================================;;
 
 (defcustom expresso-program "expresso"
 
-  "Path to the program used by `inferior-expresso'."
+  "Program used by `inferior-expresso'.
 
-  :type #'string
+a `stringp', an executable filepath.
+
+Can be:
+
+• a program name — which is found via `executable-find'.
+• an absolute filepath — which has “already been found”."
+
+  :type '(string :tag "Program or Filepath")
+
+  :safe #'string
   :group 'expresso)
 
 ;;----------------------------;;
@@ -1168,18 +1395,24 @@ Call `expresso-program-version' to get the version of the currently-registered c
 
   "Commandline arguments to pass to `expresso-program'."
 
-  :type #'string
+  :type '(repeated (string :tag "Argument or Option"))
+
+  :safe #'string
   :group 'expresso)
 
 ;;----------------------------;;
 
 (defcustom expresso-prompt-regexp
 
-  "λ>"
+  (rx bol "λ>" space)
 
-  "Regexp for matching `inferior-expresso' prompt."
+  "`comint-prompt-regexp' for `inferior-expresso-mode'.
 
-  :type #'string
+Regexp for matching the Expresso REPL's prompt."
+
+  :type '(regexp :tag "Prompt")
+
+  :safe #'string
   :group 'expresso)
 
 ;;----------------------------;;
@@ -1200,9 +1433,16 @@ Call `expresso-program-version' to get the version of the currently-registered c
 
   "Expresso REPL commands (e.g. « :help »).
 
-a `listp' of `stringp's."
+a `listp' of `stringp's.
 
-  :type #'listp
+Notes:
+
+• Don't include a leading colon.
+  e.g. the « :help » command is represented by the « \"help\" » string."
+
+  :type '(repeated (string :tag "Command"))
+
+  :safe #'listp
   :group 'expresso)
 
 ;;----------------------------;;
@@ -1213,31 +1453,41 @@ a `listp' of `stringp's."
 
   "Buffer name for `inferior-expresso'."
 
-  :type #'string
+  :type '(string :tag "Buffer")
+
+  :safe #'string
   :group 'expresso)
 
 ;;----------------------------------------------;;
+;; Commands: REPL ------------------------------;;
+;;----------------------------------------------;;
 
 ;;;###autoload
-(defun inferior-expresso (&optional name)
+(defun inferior-expresso (&optional buffer)
 
-    "Run an inferior instance of program `expresso' within Emacs.
+    "Launch an Expresso REPL.
 
-• NAME — a `stringp' or `bufferp'.
-  defaults to `inferior-expresso-buffer-name'."
+Run an inferior instance of program `expresso' within Emacs.
+
+• BUFFER — a `stringp' or `bufferp'.
+  Defaults to `inferior-expresso-buffer-name'."
 
     (interactive "P")
 
-    (let* ((PROGRAM expresso-program)
-           (BUFFER-NAME (or name inferior-expresso-buffer-name))
+    (let* ((PROGRAM     expresso-program)
+           (BUFFER-NAME (or buffer inferior-expresso-buffer-name))
            (BUFFER      (get-buffer-create BUFFER-NAME))
-         )
+           )
 
       (when (not (comint-check-proc inferior-expresso-buffer-name))
-            (apply #'make-comint-in-buffer "expresso" inferior-expresso-buffer-name PROGRAM expresso-arguments))
+        (apply #'make-comint-in-buffer "expresso" inferior-expresso-buffer-name PROGRAM expresso-arguments))
+
       (pop-to-buffer-same-window inferior-expresso-buffer-name)
+
       (inferior-expresso-mode)))
 
+;;----------------------------------------------;;
+;; Functions: REPL -----------------------------;;
 ;;----------------------------------------------;;
 
 (defun inferior-expresso-initialize ()
@@ -1247,12 +1497,13 @@ a `listp' of `stringp's."
     (setq comint-use-prompt-regexp t))
 
 ;;----------------------------------------------;;
+;; Mode: REPL ----------------------------------;;
+;;----------------------------------------------;;
 
-(define-derived-mode inferior-expresso-mode comint-mode "expresso"
+;;;###autoload
+(define-derived-mode inferior-expresso-mode comint-mode "Inferior Expresso"
 
-  "Major mode for the Expresso REPL.
-
-
+  "Major mode for Expresso REPL (an inferior process).
 
 Keymap:
 
@@ -1263,17 +1514,86 @@ Keymap:
 
   (progn
 
-  (setq comint-prompt-regexp expresso-prompt-regexp)
-  (setq comint-prompt-read-only t)
+    ;; Prompt:
 
-  (setq-local font-lock-defaults '(expresso-font-lock-keywords t))
-  (setq-local paragraph-start expresso-prompt-regexp)
-  (setq-local indent-line-function #'expresso-indent-line)
+    (setq-local comint-prompt-regexp expresso-prompt-regexp)
+    (setq-local comint-prompt-read-only t)
+    (setq-local paragraph-start expresso-prompt-regexp)
 
-  ())
+    ;; Syntax-Highlighting:
+
+    (setq-local font-lock-defaults expresso-font-lock-defaults)
+
+    ;; Indentation:
+
+    (setq-local indent-line-function #'expresso-indent-line)
+    (setq-local basic-offset expresso-basic-offset)
+    (setq-local indent-tabs-mode nil)
+
+    ;; Modeline:
+
+    (setq mode-line-process '(":%s"))
+
+    ()))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ;;----------------------------------------------;;
 ;; Functions -----------------------------------;;
+;;----------------------------------------------;;
+
+;;;###autoload
+(defun expresso-setup ()
+
+  "Setup Expresso when Requiring (or Autoloading) « expresso-mode.el ».
+
+”Setup“ includes:
+
+• Registering `expresso-mode' with `auto-mode-alist'.
+• Registering `expresso-mode' with `interpreter-mode-alist'.
+
+Related:
+
+• `expresso-setup-p'."
+
+  (progn
+
+    (add-to-list 'auto-mode-alist        (cons (rx ".x" eos) #'expresso-mode))
+    (add-to-list 'interpreter-mode-alist (cons "expresso" #'expresso-mode))
+
+    ()))
+
 ;;----------------------------------------------;;
 
 (defun expresso-program-execute (&rest arguments)
@@ -1296,6 +1616,17 @@ Examples:
         )
 
    (shell-command expresso-program arguments)))
+
+;;----------------------------------------------;;
+
+(defun expresso-repl-dwim ()
+
+  "DWIM: start Expresso REPL, or switch to it."
+
+  (let* (
+         )
+
+    TODO))
 
 ;;----------------------------------------------;;
 ;; Commands ------------------------------------;;
@@ -1449,9 +1780,9 @@ Related:
 ;; Effects -------------------------------------;;
 ;;----------------------------------------------;;
 
-(progn
+(when (bound-and-true-p 'expresso-setup-p)
 
-  (add-hook 'auto-mode-alist (cons (rx ".x" eos) #'expresso-mode))
+  (expresso-setup)
 
   (add-hook 'inferior-expresso-mode-hook #'inferior-expresso-initialize)
 
