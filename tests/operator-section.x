@@ -1,0 +1,1 @@
+(: forall a. Eq a => { x : <Foo : Int, Bar : a> }) { x = Bar "abc" }

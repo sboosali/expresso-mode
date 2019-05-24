@@ -82,6 +82,7 @@
 ;;----------------------------------------------;;
 
 (progn
+  (require 'smie)
   (require 'cl-lib)
   (require 'seq))
 
@@ -91,6 +92,19 @@
 
 ;;----------------------------------------------;;
 ;; Constants -----------------------------------;;
+;;----------------------------------------------;;
+
+(defconst expresso-program-name "expresso"
+
+  "Program used by `inferior-expresso'.
+
+a `stringp', an executable filepath.
+
+Can be:
+
+• a program name — which is found via `executable-find'.
+• an absolute filepath — which has “already been found”.")
+
 ;;----------------------------------------------;;
 
 (defconst expresso-filepath-regexp
@@ -184,140 +198,141 @@ run at the same time."
   :group 'expresso)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-(defcustom expresso-mode-builtin-operators
-
-  '( 
-
-  -- Unary, Prefix:
-
-  "-"
-
-  -- Unary, Postfix:
-
-  "{..}"
-
-  -- Binary:
-
-   ":" "\\" "=>" "->"
-    "," ";"
-    "=" ":=" "|" "." ":"
-   ">>" "<<"  
-  "==" "/="
-   ">" "<" ">=" "<="
-   "+" "-" "*" "/" 
-   "&&" "||" 
-  "++" 
-  "<>" 
-
-  )
-
-  "
-
-See URL `https://github.com/willtim/Expresso/blob/master/src/Expresso/Parser.hs'.")
-
-
-
-
-
-
-;;     , P.identStart     = letter
-;;     , P.identLetter    = alphaNum <|> oneOf "_
-;; P.opLetter       = oneOf ":!#$%&*+./<=>?@\\^|-~"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ;;----------------------------------------------;;
 ;; Variables -----------------------------------;;
 ;;----------------------------------------------;;
 
+(defvar expresso-types-table
+
+  (let* ((TEST #'equal)
+         (TABLE (make-hash-table :test TEST))
+         )
+
+    ;; « Prelude.x »:
+
+    (puthash "all"            "all : forall a. (a -> Bool) -> [a] -> Bool"                                                                                                       TABLE)
+    (puthash "and"            "and : [Bool] -> Bool"                                                                                                                             TABLE)
+    (puthash "any"            "any : forall a. (a -> Bool) -> [a] -> Bool"                                                                                                       TABLE)
+    (puthash "catMaybes"      "catMaybes : forall a. [Maybe a] -> [a]"                                                                                                           TABLE)
+    (puthash "concat"         "concat : forall a. [[a]] -> [a]"                                                                                                                  TABLE)
+    (puthash "const"          "const : forall a b. b -> a -> b"                                                                                                                  TABLE)
+    (puthash "either"         "either : forall a b c. (a -> c) -> (b -> c) -> Either a b -> c"                                                                                   TABLE)
+    (puthash "elem"           "elem : forall a. (Eq a) => a -> [a] -> Bool"                                                                                                      TABLE)
+    (puthash "filter"         "filter : forall a. (a -> Bool) -> [a] -> [a] -> [a]"                                                                                              TABLE)
+    (puthash "foldl"          "foldl : forall a b. (b -> a -> b) -> b -> [a] -> b"                                                                                               TABLE)
+    (puthash "foldr"          "foldr : forall a b. (a -> b -> b) -> b -> [a] -> b"                                                                                               TABLE)
+    (puthash "fromMaybe"      "fromMaybe : forall b. b -> Maybe b -> b"                                                                                                          TABLE)
+    (puthash "id"             "id : forall b. b -> b"                                                                                                                            TABLE)
+    (puthash "isJust"         "isJust : forall a. Maybe a -> Bool"                                                                                                               TABLE)
+    (puthash "isNothing"      "isNothing : forall a. Maybe a -> Bool"                                                                                                            TABLE)
+    (puthash "just"           "just : forall a. a -> Maybe a"                                                                                                                    TABLE)
+    (puthash "left"           "left : forall a b. a -> Either a b"                                                                                                               TABLE)
+    (puthash "length"         "length : forall a. [a] -> Int"                                                                                                                    TABLE)
+    (puthash "listToMaybe"    "listToMaybe : forall a. [a] -> Maybe a"                                                                                                           TABLE)
+    (puthash "map"            "map : forall a b. (a -> b) -> [a] -> [b]"                                                                                                         TABLE)
+    (puthash "mapMaybe"       "mapMaybe : forall a b. (a -> b) -> Maybe a -> Maybe b"                                                                                            TABLE)
+    (puthash "maybe"          "maybe : forall a b. b -> (a -> b) -> Maybe a -> b"                                                                                                TABLE)
+    (puthash "maybeToList"    "maybeToList : forall a. Maybe a -> [a]"                                                                                                           TABLE)
+    (puthash "mkOverridable"  "mkOverridable : forall b r. (r\\override_) => ({r} -> {r}) -> {override_ : ({r} -> b) -> {r} -> b | r}"                                           TABLE)
+    (puthash "notElem"        "notElem : forall a. (Eq a) => a -> [a] -> Bool"                                                                                                   TABLE)
+    (puthash "nothing"        "nothing : forall a. Maybe a"                                                                                                                      TABLE)
+    (puthash "null"           "null : forall a. [a] -> Bool"                                                                                                                     TABLE)
+    (puthash "or"             "or : [Bool] -> Bool"                                                                                                                              TABLE)
+    (puthash "override"       "override : forall a b r r1. (r\\override_, r1\\override_) => {override_ : a -> {r} -> {r} | r1} -> a -> {override_ : ({r} -> b) -> {r} -> b | r}" TABLE)
+    (puthash "right"          "right : forall a b. b -> Either a b"                                                                                                              TABLE)
+
+    ;; « List.x »:
+
+    ;; « Text.x »:
+
+    TABLE)
+
+  "Associate types and functions with signatures.
+
+a `hash-table-p':
+
+• whose keys are `stringp's.
+• whose values are `stringp's.
+
+Expresso's ”Standard Library” is defined in these files:
+
+• « lib/Prelude.x »
+• « lib/List.x »
+• « lib/Text.x »
+
+Customization:
+
+  ❶ Add new bindings via `puthash'. For example:
+
+         (puthash \"increment\" \"Int -> Int\" expresso-types-table)
+
+  ❷ Remove bindings via `remhash'. For example:
+
+         (remhash \"fix\" expresso-types-table)
+
+Links:
+
+• URL `https://github.com/willtim/Expresso/blob/0.1.2.0/lib/Prelude.x'")
+
+;; e.g. (expresso-doc-current-info "map")
+
+;;----------------------------------------------;;
+;; Custom Variables ----------------------------;;
+;;----------------------------------------------;;
+
+(defcustom expresso-value-definition-keyword-list
+
+  '("let"
+    )
+
+  "Expresso keywords which start a Value Definition (i.e. a function or constant).
+
+a `listp' of `stringp's.
+
+Links:
+
+• URL `https://github.com/willtim/Expresso/blob/master/src/Expresso/Parser.hs'."
+
+  :type '(repeated (string :tag "Keyword"))
+
+  :safe #'listp
+  :group 'expresso)
+
+;;----------------------------------------------;;
+
+(defcustom expresso-type-definition-keyword-list
+
+  '("type"
+    )
+
+  "Expresso keywords which start a Type Definition.
+
+a `listp' of `stringp's.
+
+Links:
+
+• URL `https://github.com/willtim/Expresso/blob/master/src/Expresso/Parser.hs'."
+
+  :type '(repeated (string :tag "Keyword"))
+
+  :safe #'listp
+  :group 'expresso)
+
+;;----------------------------------------------;;
+
 (defcustom expresso-keywords
 
-  '("import"
+  `("import"
     "forall"
-    "type"
-    "let"
     "in"
     "case"
     "of"
     "override"
     "if"
     "then"
-    "else" 
+    "else"
+    ,@expresso-value-definition-keyword-list
+    ,@expresso-type-definition-keyword-list
     )
 
   "Expresso keywords.
@@ -337,19 +352,19 @@ Links:
 
 (defcustom expresso-builtin-functions
 
-  '("fix"  
-    "error"
-    "show"
-    "not"
-    "uncons"
-    "fix"
-    "double"
-    "floor"
-    "ceiling"
+  '(
     "abs"
-    "mod"
     "absurd"
+    "ceiling"
+    "double"
+    "error"
+    "fix"  
+    "floor"
+    "mod"
+    "not"
     "pack"
+    "show"
+    "uncons"
     "unpack"
    )
 
@@ -366,10 +381,10 @@ a `listp' of `stringp's."
 
 (defcustom expresso-builtin-types
 
-  '("Int"
-    "Double"
-    "Bool"
+  '("Bool"
     "Char"
+    "Double"
+    "Int"
     "Text"
    )
 
@@ -386,9 +401,9 @@ a `listp' of `stringp's."
 
 (defcustom expresso-builtin-classes
 
-  '("Eq"
+  '("Num"
+    "Eq"
     "Ord"
-    "Num"
    )
 
   "Names of classes built-into Expresso.
@@ -419,19 +434,81 @@ a `listp' of `stringp's."
 
 ;;----------------------------------------------;;
 
-(defcustom expresso-builtin-operators
+(defcustom expresso-builtin-function-operators
 
-  '("-"
-   )
+  '(
+    ;; Unary/Prefix Functions:
+
+    "-"
+
+    ;; Binary Functions:
+
+    ">>"
+    "<<"
+    
+    "=="
+    "/="
+    
+    ">"
+    "<"
+    ">="
+    "<="
+    
+    "+"
+    "-"
+    "*"
+    "/" 
+
+    "&&"
+    "||" 
+
+    "++" 
+    "<>" 
+
+    )
 
   "Names of operators built-into Expresso.
 
-a `listp' of `stringp's."
+a `listp' of `stringp's.
+
+See URL `https://github.com/willtim/Expresso/blob/master/src/Expresso/Parser.hs'.")
 
   :type '(repeated (string :tag "Operator"))
 
   :safe #'listp
   :group 'expresso)
+
+;;----------------------------------------------;;
+
+(defcustom expresso-builtin-lexeme-operators
+
+  '(
+    ;; Unary/Prefix Lexemes:
+
+    ;; Unary/Postfix Lexemes:
+
+    ";"
+    "{..}"
+
+    ;; Binary/Infix Lexemes:
+
+    ","
+    "->"
+    "."
+    ":"
+    ":"
+    ":="
+    "="
+    "=>"
+    "\\"
+    "|"
+    )
+
+  "Names of lexemes in Expresso's syntax.
+
+a `listp' of `stringp's.
+
+See URL `https://github.com/willtim/Expresso/blob/master/src/Expresso/Parser.hs'.")
 
 ;;----------------------------------------------;;
 
@@ -453,12 +530,12 @@ a `listp' of `stringp's."
 
 (defconst expresso-bracket-alist
 
-  '(( "{"  . "}"  )                     ; Rercords
-    ( "{|" . "|}" )                     ; Variants
+  '(( "{"  . "}"  )                     ; Records
+    ( "{|" . "|}" )                     ; “Difference Records”
     ( "["  . "]"  )                     ; Lists
-    ( "<"  . ">"  )                     ; 
-    ( "<|" . "|>" )                     ; 
-    ( "(:" . ")"  )                     ; Sections
+    ( "<"  . ">"  )                     ; Variants
+    ( "<|" . "|>" )                     ; “Variant Embedding”
+    ( "(:" . ")"  )                     ; “Operator Sections”
 
     ( "("  . ")"  )                     ; Grouping
     ( "{-" . "-}" )                     ; Comments
@@ -467,6 +544,320 @@ a `listp' of `stringp's."
   "Matching bracket-pairs in Expresso's Syntax.
 
 See URL `https://github.com/willtim/Expresso/blob/master/src/Expresso/Parser.hs'.")
+
+
+;;     , P.identStart     = letter
+;;     , P.identLetter    = alphaNum <|> oneOf "_
+;; P.opLetter       = oneOf ":!#$%&*+./<=>?@\\^|-~"
+
+;;----------------------------------------------;;
+;; Functions: Accessors ------------------------;;
+;;----------------------------------------------;;
+
+(defun expresso-get-definition-keywords ()
+
+  "Accessor for `expresso-definition-keyword-list'.
+
+Output:
+
+• a `listp' of `stringp's."
+
+  (let* ()
+
+    expresso-definition-keyword-list))
+
+;;----------------------------------------------;;
+
+(defun expresso-get-builtin-operators ()
+
+  "Accessor for `expresso-builtin-*-operators' (Expresso's builtin operators).
+
+Output:
+
+• a `listp' of `stringp's.
+  Merges `expresso-builtin-lexeme-operators' with `expresso-builtin-function-operators'."
+
+  (let* ()
+
+    (concat expresso-builtin-lexeme-operators
+            expresso-builtin-function-operators)))
+
+;;----------------------------------------------;;
+;; SMIE ----------------------------------------;;
+;;----------------------------------------------;;
+
+(defconst expresso-smie-grammar
+
+  (smie-prec2->grammar
+   (smie-merge-prec2s
+
+    ;; :
+
+    (smie-bnf->prec2
+
+     '((id)
+       (insts (inst) (insts ";" insts))
+       (inst (exp) (inst "iuwu-mod" exp)
+             ;; Somewhat incorrect (both can be used multiple times),
+             ;; but avoids lots of conflicts:
+             (exp "and" exp) (exp "or" exp))
+       (exp  (exp1) (exp "," exp) (exp "=" exp)
+             (id " @ " exp))
+       (exp1 (exp2) (exp2 "?" exp1 ":" exp1))
+       (exp2 (exp3) (exp3 "." exp3))
+       (exp3 ("def" insts "end")
+             ("begin" insts-rescue-insts "end")
+             ("do" insts "end")
+             ("class" insts "end") ("module" insts "end")
+             ("for" for-body "end")
+             ("[" expseq "]")
+             ("{" hashvals "}")
+             ("{" insts "}")
+             ("while" insts "end")
+             ("until" insts "end")
+             ("unless" insts "end")
+             ("if" if-body "end")
+             ("case"  cases "end"))
+       (formal-params ("opening-|" exp "closing-|"))
+       (for-body (for-head ";" insts))
+       (for-head (id "in" exp))
+       (cases (exp "then" insts)
+              (cases "when" cases) (insts "else" insts))
+       (expseq (exp) );;(expseq "," expseq)
+       (hashvals (exp1 "=>" exp1) (hashvals "," hashvals))
+       (insts-rescue-insts (insts)
+                           (insts-rescue-insts "rescue" insts-rescue-insts)
+                           (insts-rescue-insts "ensure" insts-rescue-insts))
+       (itheni (insts) (exp "then" insts))
+       (ielsei (itheni) (itheni "else" insts))
+       (if-body (ielsei) (if-body "elsif" if-body)))
+
+     '((nonassoc "in") (assoc ";") (right " @ ")
+       (assoc ",") (right "="))
+
+     '((assoc "when"))
+
+     '((assoc "elsif"))
+
+     '((assoc "rescue" "ensure"))
+
+     '((assoc ",")))
+
+    ;; :
+
+    (smie-precs->prec2
+
+     '((right "=")
+       (right "+=" "-=" "*=" "/=" "%=" "**=" "&=" "|=" "^="
+              "<<=" ">>=" "&&=" "||=")
+       (nonassoc ".." "...")
+       (left "&&" "||")
+       (nonassoc "<=>")
+       (nonassoc "==" "===" "!=")
+       (nonassoc "=~" "!~")
+       (nonassoc ">" ">=" "<" "<=")
+       (left "^" "&" "|")
+       (left "<<" ">>")
+       (left "+" "-")
+       (left "*" "/" "%")
+       (left "**")
+       (assoc ".")))))
+
+  "Simplified BNF grammar (URL `http://www.cse.buffalo.edu/~regan/cse305/RubyBNF.pdf')")
+
+(defconst ruby-smie-grammar
+
+  (smie-prec2->grammar
+   (smie-merge-prec2s
+    (smie-bnf->prec2
+     '((id)
+       (insts (inst) (insts ";" insts))
+       (inst (exp) (inst "iuwu-mod" exp)
+             ;; Somewhat incorrect (both can be used multiple times),
+             ;; but avoids lots of conflicts:
+             (exp "and" exp) (exp "or" exp))
+       (exp  (exp1) (exp "," exp) (exp "=" exp)
+             (id " @ " exp))
+       (exp1 (exp2) (exp2 "?" exp1 ":" exp1))
+       (exp2 (exp3) (exp3 "." exp3))
+       (exp3 ("def" insts "end")
+             ("begin" insts-rescue-insts "end")
+             ("do" insts "end")
+             ("class" insts "end") ("module" insts "end")
+             ("for" for-body "end")
+             ("[" expseq "]")
+             ("{" hashvals "}")
+             ("{" insts "}")
+             ("while" insts "end")
+             ("until" insts "end")
+             ("unless" insts "end")
+             ("if" if-body "end")
+             ("case"  cases "end"))
+       (formal-params ("opening-|" exp "closing-|"))
+       (for-body (for-head ";" insts))
+       (for-head (id "in" exp))
+       (cases (exp "then" insts)
+              (cases "when" cases) (insts "else" insts))
+       (expseq (exp) );;(expseq "," expseq)
+       (hashvals (exp1 "=>" exp1) (hashvals "," hashvals))
+       (insts-rescue-insts (insts)
+                           (insts-rescue-insts "rescue" insts-rescue-insts)
+                           (insts-rescue-insts "ensure" insts-rescue-insts))
+       (itheni (insts) (exp "then" insts))
+       (ielsei (itheni) (itheni "else" insts))
+       (if-body (ielsei) (if-body "elsif" if-body)))
+     '((nonassoc "in") (assoc ";") (right " @ ")
+       (assoc ",") (right "="))
+     '((assoc "when"))
+     '((assoc "elsif"))
+     '((assoc "rescue" "ensure"))
+     '((assoc ",")))
+
+    (smie-precs->prec2
+     '((right "=")
+       (right "+=" "-=" "*=" "/=" "%=" "**=" "&=" "|=" "^="
+              "<<=" ">>=" "&&=" "||=")
+       (nonassoc ".." "...")
+       (left "&&" "||")
+       (nonassoc "<=>")
+       (nonassoc "==" "===" "!=")
+       (nonassoc "=~" "!~")
+       (nonassoc ">" ">=" "<" "<=")
+       (left "^" "&" "|")
+       (left "<<" ">>")
+       (left "+" "-")
+       (left "*" "/" "%")
+       (left "**")
+       (assoc ".")))))
+
+  "SMIE Grammar.
+
+Simplified BNF grammar (URL `http://www.cse.buffalo.edu/~regan/cse305/RubyBNF.pdf')")
+```
+
+e.g. `ruby-smie-rules`:
+
+``` elisp
+;;----------------------------------------------;;
+
+(defun ruby-smie-rules (kind token)
+
+  "SMIE Rules
+
+Output:
+
+• an ‘integerp’ — the current correct indentation level."
+
+  (pcase (cons kind token)
+
+    (`(:elem . basic) ruby-indent-level)
+    ;; "foo" "bar" is the concatenation of the two strings, so the second
+    ;; should be aligned with the first.
+
+    (`(:elem . args) (if (looking-at "\\s\"") 0))
+    ;; (`(:after . ",") (smie-rule-separator kind))
+
+    (`(:before . ";")
+     (cond
+      ((smie-rule-parent-p "def" "begin" "do" "class" "module" "for"
+                           "while" "until" "unless"
+                           "if" "then" "elsif" "else" "when"
+                           "rescue" "ensure" "{")
+       (smie-rule-parent ruby-indent-level))
+      ;; For (invalid) code between switch and case.
+      ;; (if (smie-parent-p "switch") 4)
+      ))
+
+    (`(:before . ,(or `"(" `"[" `"{"))
+     (cond
+      ((and (equal token "{")
+            (not (smie-rule-prev-p "(" "{" "[" "," "=>" "=" "return" ";"))
+            (save-excursion
+              (forward-comment -1)
+              (not (eq (preceding-char) ?:))))
+       ;; Curly block opener.
+       (ruby-smie--indent-to-stmt))
+      ((smie-rule-hanging-p)
+       ;; Treat purely syntactic block-constructs as being part of their parent,
+       ;; when the opening token is hanging and the parent is not an
+       ;; open-paren.
+       (cond
+        ((eq (car (smie-indent--parent)) t) nil)
+        ;; When after `.', let's always de-indent,
+        ;; because when `.' is inside the line, the
+        ;; additional indentation from it looks out of place.
+        ((smie-rule-parent-p ".")
+         ;; Traverse up the call chain until the parent is not `.',
+         ;; or `.' at indentation, or at eol.
+         (while (and (not (ruby-smie--bosp))
+                     (equal (nth 2 (smie-backward-sexp ".")) ".")
+                     (not (ruby-smie--bosp)))
+           (forward-char -1))
+         (smie-indent-virtual))
+        (t (smie-rule-parent))))))
+
+    (`(:after . ,(or `"(" "[" "{"))
+     ;; FIXME: Shouldn't this be the default behavior of
+     ;; `smie-indent-after-keyword'?
+     (save-excursion
+       (forward-char 1)
+       (skip-chars-forward " \t")
+       ;; `smie-rule-hanging-p' is not good enough here,
+       ;; because we want to reject hanging tokens at bol, too.
+       (unless (or (eolp) (forward-comment 1))
+         (cons 'column (current-column)))))
+
+    (`(:before . " @ ")
+     (save-excursion
+       (skip-chars-forward " \t")
+       (cons 'column (current-column))))
+
+    (`(:before . "do") (ruby-smie--indent-to-stmt))
+
+    (`(:before . ".")
+     (if (smie-rule-sibling-p)
+         (and ruby-align-chained-calls 0)
+       (smie-backward-sexp ".")
+       (cons 'column (+ (current-column)
+                        ruby-indent-level))))
+
+    (`(:before . ,(or `"else" `"then" `"elsif" `"rescue" `"ensure"))
+     (smie-rule-parent))
+
+    (`(:before . "when")
+     ;; Align to the previous `when', but look up the virtual
+     ;; indentation of `case'.
+     (if (smie-rule-sibling-p) 0 (smie-rule-parent)))
+
+    (`(:after . ,(or "=" "+" "-" "*" "/" "&&" "||" "%" "**" "^" "&"
+                     "<=>" ">" "<" ">=" "<=" "==" "===" "!=" "<<" ">>"
+                     "+=" "-=" "*=" "/=" "%=" "**=" "&=" "|=" "^=" "|"
+                     "<<=" ">>=" "&&=" "||=" "and" "or"))
+     (and (smie-rule-parent-p ";" nil)
+          (smie-indent--hanging-p)
+          ruby-indent-level))
+
+    (`(:after . ,(or "?" ":")) ruby-indent-level)
+
+    (`(:before . ,(guard (memq (intern-soft token) ruby-alignable-keywords)))
+     (when (not (ruby--at-indentation-p))
+       (if (ruby-smie--indent-to-stmt-p token)
+           (ruby-smie--indent-to-stmt)
+         (cons 'column (current-column)))))
+
+    (`(:before . "iuwu-mod")
+     (smie-rule-parent ruby-indent-level))
+
+    (_ 0))
+
+(defun expresso-smie-setup ()
+
+  "`smie-setup' with `expresso-smie-grammar' and `expresso-smie-rules'."
+
+  (smie-setup expresso-smie-grammar
+              #'expresso-smie-rules
+              :forward-token  #'expresso-smie--forward-token
+              :backward-token #'expresso-smie--backward-token))
 
 ;;----------------------------------------------;;
 ;; Faces ---------------------------------------;;
@@ -958,52 +1349,93 @@ These roles (punctuation and single-line comment and multi-line comment) are rep
   :safe #'integerp
   :group 'expresso)
 
+;;==============================================;;
+
+(defun expresso-indent-line ()
+
+  "`indent-line-function' for `expresso-mode'.
+
+Inputs:
+
+• .
+
+Output:
+
+• either:
+
+    • nil — indentation was performed successfully.
+    • ‘noindent’ — indentation isn't possible (e.g. within a string literal).
+
+Effects:
+
+• Point  — may move `point'.
+• Buffer — may modify the current buffer by ❶ adding whitespace or ❷ removing whitespace.
+
+Links:
+
+• URL `'
+
+Related:
+
+• `'"
+
+  (let* (
+         )
+
+    (save-excursion
+
+      
+
+      ())))
+
+;; Users expect Emacs to indent code correctly regardless of its current state. You’ll need to examine the syntax around point to calculate the current nesting level.
+;;
+;; - (1) This is usually a matter of searching the buffer backwards from point, counting instances of { (or equivalent scope delimiter). You then adjust the current line to be indented (* my-mode-tab-width count). Provided you’re careful with { in strings and comments, this works.
+;;
+;; - (2) Alternatively, Emacs provides the Simple Minded Indentation Engine (SMIE). You write a BNF grammar and you get basic indentation and movement commands for free.
+
 ;;----------------------------------------------;;
 ;; ElDoc ---------------------------------------;;
 ;;----------------------------------------------;;
 
-(defvar expresso-doc-table
-
-  (let* ((TEST #'equal)
-         (TABLE (make-hash-table :test TEST))
-         )
-
-    (puthash "map" "map : forall a b. (a -> b) -> [a] -> [b]" TABLE)
-
-    TABLE)
-
-  "Associate types and functions with signatures or with documentation.
-
-Type is a `hash-table-p':
-
-• whose keys are `stringp's.
-• whose values are `stringp's.")
-
-;;----------------------------------------------;;
-
-(defun expresso-doc-current-info ()
+(defun expresso-doc-current-info (&optional symbol)
 
   "`eldoc-documentation-function' for `expresso-mode'.
+
+Input:
+
+• SYMBOL — a `stringp' or nil.
+  Expresso symbol whose signature and/or documentation will be output.
+  Defaults to the “symbol-at-`point'”.
 
 Output:
 
 • a `stringp' or nil.
-  a one-line message: documentation or a signature.
+  a one-line message. 
+  ❶ a signature and/or ❷ documentation.
 
 Expresso Eldoc displays the types (& kinds) 
 of standard library functions (& types) and of builtins.
 
-Expresso's Standard Library is defined in these files:
+Related:
 
-• « lib/Prelude.x »
-• « lib/List.x »
-• « lib/Text.x »
+• `expresso-types-table'
 
 Links:
 
 • URL `https://github.com/willtim/Expresso/tree/0.1.2.0/lib'"
 
-  ())                                   ;TODO
+  (interactive)
+
+  (when-let* ((CURRENT-SYMBOL (or symbol (thing-at-point 'symbol)))
+              (CURRENT-TYPE   (gethash CURRENT-SYMBOL expresso-types-table))
+              (CURRENT-DOC    CURRENT-TYPE)
+              )
+
+    (when (called-interactively-p 'any)
+      (message "%s" CURRENT-DOC))
+
+    CURRENT-DOC))
 
 ;;----------------------------------------------;;
 ;; Completion ----------------------------------;;
@@ -1262,13 +1694,14 @@ Call `expresso-program-version' to get the version of the currently-registered c
 
     ;; Indentation:
 
-    (setq-local basic-offset expresso-basic-offset)
+    (setq-local indent-line-function #'expresso-indent-line)
 
-    (setq-local indent-tabs-mode                nil)
+    (setq-local basic-offset expresso-basic-offset)
+    (setq-local indent-tabs-mode nil)
     (setq-local comment-auto-fill-only-comments t)
 
-    (when (boundp 'electric-indent-inhibit)
-      (setq electric-indent-inhibit t))
+    ;; (when (boundp 'electric-indent-inhibit)
+    ;;   (setq electric-indent-inhibit t))
 
     ;; ElDoc:
 
@@ -1283,13 +1716,6 @@ Call `expresso-program-version' to get the version of the currently-registered c
     (font-lock-fontify-buffer)
 
     #'expresso-mode))
-
-* `(defvar *-hook '( _ ... ))` — a *Standard Hook*; a `listp` of `functionp`s (like `*-functions`).
-* `(defvar *-function _)` — a `functionp` (i.e. `#'...` or `(lambda (...) ...)`)
-* `(defvar *-functions '( _ ... ))` — a `listp` of `functionp`s.
-* `(defvar *-form _)`
-* `(defvar *-command '( "_" ... ))` — a *Program Invocation*; a `stringp`, or a `listp` of `stringp`s. e.g. `"cabal -v new-build all --project-file=./cabal-ghcsjs.project"` or `'("cabal" "-v" "new-build" "all" "--project-file=./cabal-ghcsjs.project")`.
-* `(defvar *-switches '( "_" ... ))` — some *Program Options*; a `listp` of `stringp`s. e.g. `'("-v" "--project-file" "./cabal-ghcsjs.project")`.
 
 ;;; REPL...
 
@@ -1311,7 +1737,7 @@ Customize the behavior/appearence of `inferior-expresso-mode'."
 
 ;;==============================================;;
 
-(defcustom expresso-program "expresso"
+(defcustom expresso-program expresso-program-name
 
   "Program used by `inferior-expresso'.
 
@@ -1320,7 +1746,9 @@ a `stringp', an executable filepath.
 Can be:
 
 • a program name — which is found via `executable-find'.
-• an absolute filepath — which has “already been found”."
+• an absolute filepath — which has “already been found”.
+
+Defaults to `expresso-program-name'."
 
   :type '(string :tag "Program or Filepath")
 
@@ -1329,11 +1757,34 @@ Can be:
 
 ;;----------------------------;;
 
-(defcustom expresso-arguments '()
+(defcustom expresso-switches '("-i")
 
-  "Commandline arguments to pass to `expresso-program'."
+  "Commandline options & arguments to pass to `expresso-program'.
 
-  :type '(repeated (string :tag "Argument or Option"))
+a `listp' of `stringp's."
+
+  :type '(repeated (string :tag "Option or Argument"))
+
+  :safe #'string
+  :group 'expresso)
+
+;;----------------------------;;
+
+(defcustom expresso-command nil
+
+  "Commandline invocation of `expresso-program'.
+
+If `expresso-command' is non-nil, 
+it shadows `expresso-program' plus `expresso-switches'
+(see `expresso-get-command').
+
+Type can be:
+
+• a `stringp'.
+• a `listp' of `stringp's."
+
+  :type '(choice (string :tag "Commandline")
+                 (repeated (string :tag "Command (words)")))
 
   :safe #'string
   :group 'expresso)
@@ -1378,7 +1829,7 @@ Notes:
 • Don't include a leading colon.
   e.g. the « :help » command is represented by the « \"help\" » string."
 
-  :type '(repeated (string :tag "Command"))
+  :type '(repeated (string :tag "REPL Command"))
 
   :safe #'listp
   :group 'expresso)
@@ -1418,7 +1869,7 @@ Run an inferior instance of program `expresso' within Emacs.
            )
 
       (when (not (comint-check-proc inferior-expresso-buffer-name))
-        (apply #'make-comint-in-buffer "expresso" inferior-expresso-buffer-name PROGRAM expresso-arguments))
+        (apply #'make-comint-in-buffer "expresso" inferior-expresso-buffer-name PROGRAM expresso-switches))
 
       (pop-to-buffer-same-window inferior-expresso-buffer-name)
 
@@ -1466,6 +1917,7 @@ Keymap:
 \\<inferior-expresso-mode-map>"
 
   nil
+
   "expresso"
 
   (progn
@@ -1483,12 +1935,12 @@ Keymap:
     ;; Indentation:
 
     (setq-local indent-line-function #'expresso-indent-line)
-    (setq-local basic-offset expresso-basic-offset)
     (setq-local indent-tabs-mode nil)
+    (setq-local basic-offset expresso-basic-offset)
 
     ;; Modeline:
 
-    (setq mode-line-process '(":%s"))
+    (setq-local mode-line-process '(":%s"))
 
     ()))
 
@@ -1890,7 +2342,11 @@ Effects:
 
 ;; e.g. Expresso expressions:
 ;; 
+;; λ> {x = 1, y = True}
+;; 
 ;; λ> let sqmag = r -> r.x*r.x + r.y*r.y
+;; 
+;; λ> let sqmag = {x, y} -> x*x + y*y
 ;; 
 ;; λ> {| x = "foo" |} >> {| x := "bar" |} -- Type checks
 ;; 
@@ -1930,6 +2386,9 @@ Effects:
 ;; 
 ;; λ> 
 ;; 
+;; λ> (: forall a. Eq a => { x : <Foo : Int, Bar : a> }) { x = Bar "abc" }
+;; {x = Bar "abc"}
+;;
 ;; λ> 
 ;; 
 ;; λ> 
@@ -1955,8 +2414,14 @@ Effects:
 ;; λ> 
 ;; 
 ;; λ> 
+
+;; e.g. Qualified Import:
 ;; 
-;; λ> 
+;; λ> let List = import "List.x"
+
+;; e.g. Unqualified Import:
+;; 
+;; λ> let {..} = import "List.x"
 
 ;;----------------------------------------------;;
 ;; Notes ---------------------------------------;;
