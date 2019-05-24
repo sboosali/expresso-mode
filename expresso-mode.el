@@ -77,12 +77,12 @@
 
 (eval-when-compile
   (require 'rx)
-  (require 'pcase)
-  (require 'cl-lib))
+  (require 'pcase))
 
 ;;----------------------------------------------;;
 
 (progn
+  (require 'cl-lib)
   (require 'seq))
 
 ;;----------------------------------------------;;
@@ -93,11 +93,26 @@
 ;; Constants -----------------------------------;;
 ;;----------------------------------------------;;
 
+(defconst expresso-filepath-regexp
+
+  (rx ".x" eos)
+
+  "Match an Expresso file.
+
+a `regexpp's.
+
+(Filename Patterns, in particular, can be File Extensions.
+See `auto-mode-alist' for the syntax.)")
+
+;;----------------------------------------------;;
+
 (defconst expresso-mode-help-buffer-name
 
   "*Help Expresso Mode Tutorial*"
 
   "`buffer-name' for `expresso-mode-help'.")
+
+;;----------------------------------------------;;
 
 ;;; Major Mode...
 
@@ -114,19 +129,6 @@ Customize the behavior/appearence of `expresso-mode'."
   :link (url-link :tag "GitHub" "https://github.com/sboosali/expresso-mode#readme")
 
   :group 'language)
-
-;;==============================================;;
-
-(defcustom expresso-filename-extensions
-
-  '( "x" "expresso" )
-
-  "File extensions for Expresso files."
-
-  :type '(repeat (string :tag "File Extension"))
-
-  :safe #'listp
-  :group 'expresso)
 
 ;;==============================================;;
 
@@ -207,31 +209,6 @@ run at the same time."
 
 
 
-
-
-
-
-
-
-(defconst expresso-mode-bracket-alist
-
-  '(
-
- ( "{" . "}" )
- ( "{|" . "|}" )
- ( "[" . "]" )
- ( "<" . ">" )
- ( "<|" . "|>" )
- ( "(" . ")" )
-
- ( "{-" . "-}" )
-
-  )
-;; ( "" . "" )
-
-  "
-
-See URL `https://github.com/willtim/Expresso/blob/master/src/Expresso/Parser.hs'.")
 
 
 
@@ -474,74 +451,22 @@ a `listp' of `stringp's."
 
 ;;----------------------------------------------;;
 
-(defcustom expresso-file-regexps
+(defconst expresso-bracket-alist
 
-  '("\\.x\\'"
-   )
+  '(( "{"  . "}"  )                     ; Rercords
+    ( "{|" . "|}" )                     ; Variants
+    ( "["  . "]"  )                     ; Lists
+    ( "<"  . ">"  )                     ; 
+    ( "<|" . "|>" )                     ; 
+    ( "(:" . ")"  )                     ; Sections
 
-  "Match a `expresso-mode' file.
-
-a `listp' of `regexp's.
-
-Filename Patterns, in particular, can be File Extensions.
-See `auto-mode-alist' for the syntax."
-
-  :type '(repeated (regexp :tag "File Pattern"))
-
-  :safe #'listp
-  :group 'expresso)
-
-;;----------------------------------------------;;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-;;----------------------------------------------;;
-
-(defvar expresso-keyword-faces-alist
-
-  '(
-    ("^#.*"      . font-lock-comment-face)       ;; comments at start of line
-    ("<dgn.*?>"  . font-lock-builtin-face)       ;; 
-    ("^<.*?>"    . font-lock-function-name-face) ;; LHS nonterminals
-    ("<.*?>"     . font-lock-variable-name-face) ;; other nonterminals
-    ("{.*?}"     . font-lock-variable-name-face) ;;
-    ("="         . font-lock-constant-face)      ;; "goes-to" symbol
-    (";"         . font-lock-constant-face)      ;; statement delimiter
-    ("\|"        . font-lock-keyword-face)       ;; "OR" symbol
-    ("\+"        . font-lock-keyword-face)       ;; 
-    ("\["        . font-lock-keyword-face)       ;; 
-    ("\]"        . font-lock-keyword-face)       ;; 
+    ( "("  . ")"  )                     ; Grouping
+    ( "{-" . "-}" )                     ; Comments
     )
 
-  "Alist of regexps and faces, for syntax-highlighting `expresso-mode'.")
+  "Matching bracket-pairs in Expresso's Syntax.
 
-
-
-
-
-
-
-
-
-
+See URL `https://github.com/willtim/Expresso/blob/master/src/Expresso/Parser.hs'.")
 
 ;;----------------------------------------------;;
 ;; Faces ---------------------------------------;;
@@ -744,6 +669,39 @@ Customize:
 ;; Font Lock -----------------------------------;;
 ;;----------------------------------------------;;
 
+(defconst expresso--font-lock-keywords-keyword
+
+  (cons (expresso-keyword-regexp) 'expresso-keyword-face)
+
+  "Highlighting keywords.")
+
+;;----------------------------------------------;;
+
+(defconst expresso--font-lock-keywords-shebang
+
+  (list (rx buffer-start "#!" (0+ not-newline) eol)
+       '(0 font-lock-comment-face))
+
+  "Highlighting the “shebang line” (e.g. « #!/bin/env expresso »).")
+
+;;----------------------------------------------;;
+
+(defvar expresso-font-lock-keywords
+
+  (list expresso--font-lock-keywords-keyword
+        expresso--font-lock-keywords-
+     ;; expresso--font-lock-keywords-
+        expresso--font-lock-keywords-shebang)
+
+  "`font-lock-keywords' for `expresso-mode'.
+
+a `listp' associating `regexpp's with `facep's.
+
+(For “Search-based Fontification”,
+a.k.a. “Keyword-based Syntax-Highlighting”).")
+
+;;----------------------------------------------;;
+
 (defvar expresso-font-lock-defaults
 
   (let ((expresso-font-lock-keywords-only             t)   ; Search-Based Fontification
@@ -751,23 +709,7 @@ Customize:
         )
     (list 'expresso-font-lock-keywords expresso-font-lock-keywords-only expresso-font-lock-keywords-case-fold-search))
 
-  "`font-lock-defaults' for `expresso-mode'.
-
-a `listp'.")
-
-;;----------------------------------------------;;
-
-(defvar expresso-font-lock-keywords
-
-  '(
-    
-    )
-
-  "`font-lock-defaults' for `expresso-mode'.
-
-a `listp'.")
-
-  `((,(expresso-mode-keyword-regexp) . font-lock-keyword-face))
+  "`font-lock-defaults' for `expresso-mode'.")
 
 ;;----------------------------------------------;;
 ;; Syntax --------------------------------------;;
@@ -1346,12 +1288,8 @@ Call `expresso-program-version' to get the version of the currently-registered c
 * `(defvar *-function _)` — a `functionp` (i.e. `#'...` or `(lambda (...) ...)`)
 * `(defvar *-functions '( _ ... ))` — a `listp` of `functionp`s.
 * `(defvar *-form _)`
-* `(defvar *-forms '( _ ... ))`
-* `(defvar *-program "_")` — a *Program Name*; a `stringp`. e.g. `"cabal"`.
 * `(defvar *-command '( "_" ... ))` — a *Program Invocation*; a `stringp`, or a `listp` of `stringp`s. e.g. `"cabal -v new-build all --project-file=./cabal-ghcsjs.project"` or `'("cabal" "-v" "new-build" "all" "--project-file=./cabal-ghcsjs.project")`.
 * `(defvar *-switches '( "_" ... ))` — some *Program Options*; a `listp` of `stringp`s. e.g. `'("-v" "--project-file" "./cabal-ghcsjs.project")`.
-* `(defvar *-internal )` —  `*-internal` is used internally and is *defined in C code*.
-* `(defvar <feature>--* ...)` — `<feature>--*` is used internally to `<feature>.el` (a `featurep`).
 
 ;;; REPL...
 
@@ -1490,6 +1428,24 @@ Run an inferior instance of program `expresso' within Emacs.
 ;; Functions: REPL -----------------------------;;
 ;;----------------------------------------------;;
 
+;;;###autoload
+(defun inferior-expresso-setup ()
+
+  "Setup Inferior Expresso.
+
+Related:
+
+• Gated by `expresso-setup-p'.
+• Inverted by `expresso-unload-function'."
+
+  (progn
+
+    (add-hook 'inferior-expresso-mode-hook #'inferior-expresso-initialize)
+
+    ()))
+
+;;----------------------------------------------;;
+
 (defun inferior-expresso-initialize ()
 
     "Initialize `inferior-expresso-mode'."
@@ -1585,11 +1541,12 @@ Keymap:
 
 Related:
 
-• `expresso-setup-p'."
+• Gated by `expresso-setup-p'.
+• Inverted by `expresso-unload-function'."
 
   (progn
 
-    (add-to-list 'auto-mode-alist        (cons (rx ".x" eos) #'expresso-mode))
+    (add-to-list 'auto-mode-alist        (cons expresso-filepath-regexp #'expresso-mode))
     (add-to-list 'interpreter-mode-alist (cons "expresso" #'expresso-mode))
 
     ()))
@@ -1619,14 +1576,15 @@ Examples:
 
 ;;----------------------------------------------;;
 
-(defun expresso-repl-dwim ()
+(defun expresso-comint-send-string (string)
 
-  "DWIM: start Expresso REPL, or switch to it."
+  "`comint-send-string' for `inferior-expresso-mode'.
 
-  (let* (
-         )
+Inputs:
 
-    TODO))
+• STRING — a `stringp'."
+
+  ())
 
 ;;----------------------------------------------;;
 ;; Commands ------------------------------------;;
@@ -1680,7 +1638,54 @@ Output:
 
 ;;----------------------------------------------;;
 
-;;;###autoload
+(defun expresso-repl-dwim ()
+
+  "DWIM: start Expresso REPL, or switch to it."
+
+  (let* (
+         )
+
+    TODO))
+
+;;----------------------------------------------;;
+
+(defun expresso-send-region-to-shell (beg end)
+
+  "Send region (between BEG and END) to the Expresso REPL.
+
+Inputs:
+
+• BEG — an `integerp'.
+• END — an `integerp'."
+
+  (interactive "r")
+
+  (let* ((STRING (buffer-substring-no-properties beg end))
+       )
+
+  (expresso-comint-send-string STRING)))
+
+;;----------------------------------------------;;
+
+(defun expresso-send-buffer-to-shell (&optional buffer)
+
+  "Send BUFFER to the Expresso REPL.
+
+Inputs:
+
+• BUFFER — a `bufferp'."
+
+  (interactive)
+
+  (let* ((BUFFER (current-buffer))
+       )
+
+  (with-current-buffer BUFFER
+
+    (expresso-send-region-to-shell (point-min) (point-max)))))
+
+;;----------------------------------------------;;
+
 (defun expresso-forward-sexp (&optional arg)
 
   "Expresso specific version of `forward-sexp'.
@@ -1777,16 +1782,39 @@ Related:
 ;; 
 
 ;;----------------------------------------------;;
+;; Unloading -----------------------------------;;
+;;----------------------------------------------;;
+
+(defun expresso-unload-function ()
+
+  "`unload-feature' for `expresso'.
+
+Inverts `expresso-setup' and `inferior-expresso-setup'
+(which get executed by « (load \"expresso.el\") »).
+
+Effects:
+
+• Unregisters `expresso-mode' from `auto-mode-alist'.
+• Unregisters `expresso-mode' from `interpreter-mode-alist'."
+
+  (progn
+
+    (setq auto-mode-alist
+          (cl-remove #'expresso-mode auto-mode-alist        :test #'equal :key #'cdr))
+
+    (setq interpreter-mode-alist
+          (cl-remove #'expresso-mode interpreter-mode-alist :test #'equal :key #'cdr))
+
+    ()))
+
+;;----------------------------------------------;;
 ;; Effects -------------------------------------;;
 ;;----------------------------------------------;;
 
 (when (bound-and-true-p 'expresso-setup-p)
 
   (expresso-setup)
-
-  (add-hook 'inferior-expresso-mode-hook #'inferior-expresso-initialize)
-
-  ())
+  (inferior-expresso-setup))
 
 ;;----------------------------------------------;;
 ;; Examples ------------------------------------;;
